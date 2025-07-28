@@ -21,14 +21,16 @@ export default function RegisterPage() {
     e.preventDefault();
 
     // Validasi kolom tidak boleh kosong
-    if (
-      !form.firstName ||
-      !form.lastName ||
-      !form.email ||
-      !form.password ||
-      !form.password_confirmation
-    ) {
+    const { firstName, lastName, email, password, password_confirmation } = form;
+
+    if (!firstName || !lastName || !email || !password || !password_confirmation) {
       alert('Kolom tidak boleh kosong');
+      return;
+    }
+
+    // Validasi konfirmasi password
+    if (password !== password_confirmation) {
+      alert('Konfirmasi kata sandi tidak cocok');
       return;
     }
 
@@ -37,42 +39,39 @@ export default function RegisterPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
-          firstName: form.firstName,
-          lastName: form.lastName,
+          first_name: form.firstName,
+          last_name: form.lastName,
           email: form.email,
           password: form.password,
           password_confirmation: form.password_confirmation,
         }),
       });
 
-      // Cek response dari API
-      if (response.ok) {
-        const result = await response.json();
-        alert('Daftar berhasil!');
-        localStorage.setItem('token', result.token); // Simpan token ke localStorage
-        window.location.href = '/authentication/login'; // Arahkan ke halaman login
-      } else {
-        const error = await response.json();
+      const data = await response.json();
 
-        // Tampilkan pesan jika email sudah terdaftar
-        if (error.message === 'Email sudah terdaftar') {
-          alert('Email sudah terdaftar');
+      if (response.ok) {
+        alert('Daftar berhasil!');
+        localStorage.setItem('token', data.token);
+        window.location.href = '/authentication/login';
+      } else {
+        if (data?.message) {
+          alert(data.message);
         } else if (
-          error.errors &&
-          error.errors.password &&
-          error.errors.password.includes('The password field confirmation does not match.')
+          data?.errors?.password &&
+          data.errors.password.includes('The password field confirmation does not match.')
         ) {
-          // Tampilkan pesan jika password tidak sesuai
           alert('Password atau kata sandi tidak sesuai');
         } else {
-          alert('Registrasi gagal, periksa konsol untuk detail.');
+          alert('Registrasi gagal. Silakan coba lagi.');
+          console.error('Detail error:', data);
         }
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Terjadi kesalahan, coba lagi nanti.');
+      alert('Terjadi kesalahan. Silakan coba lagi nanti.');
     }
   };
 
@@ -98,7 +97,7 @@ export default function RegisterPage() {
         <div className="absolute top-[-1200px] left-12 translate-x-[-50%] w-70 h-350 bg-[#979797] opacity-100 rounded-3xl rotate-355 z-1"></div>
         <div className="absolute top-[-1200px] left-26 translate-x-[-50%] w-70 h-355 bg-[#404040] opacity-100 rounded-3xl z-5"></div>
 
-        {/* Form Section with Blur */}
+        {/* Form Section */}
         <div className="w-full md:w-1/2 flex flex-col items-center px-4 md:px-8">
           <div className="w-full backdrop-blur-md bg-white/30 rounded-xl p-6 shadow-lg">
             <h2 className="text-2xl font-bold text-center text-white mb-9">
