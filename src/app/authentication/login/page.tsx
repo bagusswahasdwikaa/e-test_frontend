@@ -26,7 +26,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify(form),
       });
@@ -41,8 +41,17 @@ export default function LoginPage() {
       // Simpan token ke localStorage
       localStorage.setItem('token', data.token);
 
-      // Arahkan ke dashboard user
-      router.push('/user/dashboard');
+      // Dapatkan role user
+      const role = data.user.role;
+
+      // Arahkan ke dashboard sesuai role
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (role === 'user') {
+        router.push('/user/dashboard');
+      } else {
+        throw new Error('Role tidak dikenali.');
+      }
 
     } catch (err: any) {
       setError(err.message);
@@ -53,7 +62,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen bg-[#5E7798] flex flex-col lg:flex-row items-center justify-between p-6 overflow-hidden">
-      
       {/* Decorative Elements */}
       <div className="absolute right-8 top-16 w-72 h-[700px] lg:w-[20rem] lg:h-[90vh] bg-gradient-to-br from-[#2C3E50] via-[#34495E] to-[#5E7798] rounded-2xl shadow-2xl backdrop-blur-md opacity-70 animate-pulse z-0"></div>
       <div className="absolute left-10 bottom-20 w-48 h-48 bg-gradient-to-tr from-[#8CA6DB] to-[#B993D6] rounded-xl shadow-lg blur-sm opacity-60 rotate-12 z-0"></div>

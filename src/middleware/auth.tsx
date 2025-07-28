@@ -9,7 +9,7 @@ export default function useAuthRedirect() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      router.replace('/authentication/login');
+      router.push('/authentication/login');
     }
-  }, [router]);
+  }, []);
 }
