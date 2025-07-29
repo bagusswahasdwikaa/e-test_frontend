@@ -9,9 +9,9 @@ export default function Sidebar() {
 
   const menu = [
     { name: 'Dashboard', path: '/admin/dashboard' },
-    { name: 'Ujian', path: '/admin/ujian' },
-    { name: 'Peserta', path: '/admin/peserta' },
-    { name: 'Hasil', path: '/admin/hasil' },
+    { name: 'Daftar Ujian', path: '/admin/daftarUjian' },
+    { name: 'Daftar Peserta', path: '/admin/daftarPeserta' },
+    { name: 'Profil', path: '/admin/profil' },
   ];
 
   const handleLogout = () => {

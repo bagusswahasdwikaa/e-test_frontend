@@ -1,82 +1,124 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import SidebarAdmin from '@/components/AdminSidebar';
+import AdminHeader from '@/components/AdminHeader';
 
-const examData = [
-  { id: '001', name: 'Andi Wijaya', date: '2024-04-01', score: 85, exam: 'Matematika', status: 'Selesai' },
-  { id: '002', name: 'Budi Santoso', date: '2024-04-02', score: 78, exam: 'Bahasa Inggris', status: 'Selesai' },
-  { id: '003', name: 'Citra Dewi', date: '2024-04-03', score: null, exam: 'Fisika', status: 'Belum' },
-  { id: '004', name: 'Dewi Lestari', date: '2024-04-04', score: 92, exam: 'Kimia', status: 'Selesai' },
-  { id: '005', name: 'Eko Prasetyo', date: '2024-04-05', score: 67, exam: 'Biologi', status: 'Selesai' },
-];
+interface ExamResult {
+  id_peserta: number;
+  nama_lengkap: string;
+  tanggal: string | null;
+  hasil_tes: number | null;
+  nama_ujian: string;
+  status: string;
+}
 
 export default function AdminDashboard() {
+  const [examData, setExamData] = useState<ExamResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/nilai-peserta')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return res.json();
+      })
+      .then((json) => {
+        if (Array.isArray(json)) {
+          setExamData(json);
+        } else {
+          throw new Error('Response format tidak sesuai');
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Filter data berdasarkan searchTerm (cari di nama_lengkap dan nama_ujian)
+  const filteredData = examData.filter(
+    (item) =>
+      item.nama_lengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.nama_ujian.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <SidebarAdmin />
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* Header */}
+      <AdminHeader searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-      <main className="flex-1 p-6">
-        <h1 className="text-2xl font-semi-bold mb-5 text-gray-800">Daftar Nilai Peserta Ujian</h1>
+      {/* Content area: Sidebar + Main */}
+      <div className="flex flex-1 overflow-hidden">
+        <SidebarAdmin />
 
-        <div className="bg-white shadow rounded-lg overflow-auto">
-          <table className="min-w-full text-sm text-gray-800 border-collapse">
-            <thead>
-              <tr className="bg-blue-900 text-white text-center">
-                <th className="px-6 py-3 whitespace-nowrap">ID Peserta</th>
-                <th className="px-6 py-3 whitespace-nowrap">Nama Lengkap</th>
-                <th className="px-6 py-3 whitespace-nowrap">Tanggal</th>
-                <th className="px-6 py-3 whitespace-nowrap">Hasil Tes</th>
-                <th className="px-6 py-3 whitespace-nowrap">Nama Ujian</th>
-                <th className="px-6 py-3 whitespace-nowrap">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {examData.map((item) => (
-                <tr key={item.id} className="border-t border-gray-200 text-center hover:bg-gray-50">
-                  <td className="px-6 py-3 whitespace-nowrap">{item.id}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">{item.name}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">{item.date}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">{item.score ?? '-'}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">{item.exam}</td>
-                  <td className="px-6 py-3 whitespace-nowrap">
-                    <span
-                      className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white ${
-                        item.status === 'Selesai' ? 'bg-green-600' : 'bg-red-700'
-                      }`}
+        <main className="flex-1 p-6 overflow-auto">
+          <h1 className="text-2xl font-semibold mb-5 text-gray-800">Daftar Nilai Peserta Ujian</h1>
+
+          {loading ? (
+            <p className="text-gray-600">Memuat data...</p>
+          ) : error ? (
+            <p className="text-red-600">Error: {error}</p>
+          ) : (
+            <div className="bg-white shadow rounded-lg overflow-auto">
+              <table className="min-w-full text-sm text-gray-800 border-collapse">
+                <thead>
+                  <tr className="bg-blue-900 text-white text-center">
+                    <th className="px-6 py-3 whitespace-nowrap">ID Peserta</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Nama Lengkap</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Tanggal</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Hasil Tes</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Nama Ujian</th>
+                    <th className="px-6 py-3 whitespace-nowrap">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((item) => (
+                    <tr
+                      key={`${item.id_peserta}-${item.nama_ujian}`}
+                      className="border-t border-gray-200 text-center hover:bg-gray-50"
                     >
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td className="px-6 py-3 whitespace-nowrap">{item.id_peserta.toString().padStart(3, '0')}</td>
+                      <td className="px-6 py-3 whitespace-nowrap">{item.nama_lengkap}</td>
+                      <td className="px-6 py-3 whitespace-nowrap">{item.tanggal ?? '-'}</td>
+                      <td className="px-6 py-3 whitespace-nowrap">{item.hasil_tes ?? '-'}</td>
+                      <td className="px-6 py-3 whitespace-nowrap">{item.nama_ujian}</td>
+                      <td className="px-6 py-3 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs font-semibold text-white ${
+                            item.status === 'Selesai' ? 'bg-green-600' : 'bg-red-700'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredData.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-4 text-center text-gray-500">
+                        Data tidak ditemukan
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        <div className="mt-6 flex justify-end">
-          <button className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2">
-            <svg
-              className="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
+          <div className="mt-6 flex justify-end">
+            <button
+              className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
+              onClick={() => alert('Fitur Unduh belum tersedia')}
             >
-              <path
-                fillRule="evenodd"
-                d="M9 3a1 1 0 112 0v7.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 10.586V3z"
-                clipRule="evenodd"
-              />
-              <path
-                fillRule="evenodd"
-                d="M3 14a1 1 0 011 1v2h12v-2a1 1 0 112 0v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a1 1 0 011-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Unduh Semua Nilai
-          </button>
-        </div>
-      </main>
+              Unduh Semua
+            </button>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
