@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
+    id: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -20,17 +21,21 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validasi kolom tidak boleh kosong
-    const { firstName, lastName, email, password, password_confirmation } = form;
+    const { id, firstName, lastName, email, password, password_confirmation } = form;
 
-    if (!firstName || !lastName || !email || !password || !password_confirmation) {
-      alert('Kolom tidak boleh kosong');
+    // Validasi input
+    if (!id || !firstName || !lastName || !email || !password || !password_confirmation) {
+      alert('Semua kolom harus diisi.');
       return;
     }
 
-    // Validasi konfirmasi password
+    if (!/^\d+$/.test(id)) {
+      alert('ID harus berupa angka.');
+      return;
+    }
+
     if (password !== password_confirmation) {
-      alert('Konfirmasi kata sandi tidak cocok');
+      alert('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
@@ -39,39 +44,35 @@ export default function RegisterPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
-          first_name: form.firstName,
-          last_name: form.lastName,
-          email: form.email,
-          password: form.password,
-          password_confirmation: form.password_confirmation,
+          id: parseInt(id, 10),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          email: email.trim(),
+          password,
+          password_confirmation,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        alert('Daftar berhasil!');
-        localStorage.setItem('token', data.token);
+        alert('Registrasi berhasil!');
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
         window.location.href = '/authentication/login';
       } else {
-        if (data?.message) {
-          alert(data.message);
-        } else if (
-          data?.errors?.password &&
-          data.errors.password.includes('The password field confirmation does not match.')
-        ) {
-          alert('Password atau kata sandi tidak sesuai');
-        } else {
-          alert('Registrasi gagal. Silakan coba lagi.');
-          console.error('Detail error:', data);
-        }
+        const errors = data.errors
+          ? Object.values(data.errors).flat().join('\n')
+          : data.message || 'Terjadi kesalahan saat registrasi.';
+        alert(errors);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi nanti.');
+      alert('Terjadi kesalahan koneksi ke server.');
     }
   };
 
@@ -80,9 +81,9 @@ export default function RegisterPage() {
       {/* Background Rectangles */}
       <div className="absolute bottom-20 right-16 w-24 h-24 bg-[#404040] opacity-40 rotate-45 rounded-lg z-0"></div>
 
-      {/* Content Container */}
+      {/* Main Container */}
       <div className="flex flex-col md:flex-row items-center max-w-5xl w-full relative z-20">
-        {/* Image Section */}
+        {/* Left Image */}
         <div className="w-full md:w-1/2 mb-8 md:mb-0 flex justify-center">
           <Image
             src="/assets/img/pic1.png"
@@ -93,20 +94,20 @@ export default function RegisterPage() {
           />
         </div>
 
-        {/* Decorative Rectangles */}
-        <div className="absolute top-[-1200px] left-12 translate-x-[-50%] w-70 h-350 bg-[#979797] opacity-100 rounded-3xl rotate-355 z-1"></div>
-        <div className="absolute top-[-1200px] left-26 translate-x-[-50%] w-70 h-355 bg-[#404040] opacity-100 rounded-3xl z-5"></div>
-
-        {/* Form Section */}
+        {/* Right Form */}
         <div className="w-full md:w-1/2 flex flex-col items-center px-4 md:px-8">
           <div className="w-full backdrop-blur-md bg-white/30 rounded-xl p-6 shadow-lg">
-            <h2 className="text-2xl font-bold text-center text-white mb-9">
-              Daftar E-Test
-            </h2>
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col items-center justify-center space-y-6 w-full"
-            >
+            <h2 className="text-2xl font-bold text-center text-white mb-9">Daftar E-Test</h2>
+            <form onSubmit={handleSubmit} className="flex flex-col space-y-6 w-full">
+              <input
+                type="text"
+                name="id"
+                placeholder="ID (angka)"
+                value={form.id}
+                onChange={handleChange}
+                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+                required
+              />
               <input
                 type="text"
                 name="firstName"

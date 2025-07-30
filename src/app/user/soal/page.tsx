@@ -1,6 +1,6 @@
 'use client';
 
-import Sidebar from '@/components/Sidebar';
+import Sidebar from '@/components/UserSidebar';
 import useAuthRedirect from '@/middleware/auth';
 
 export default function SoalPage() {

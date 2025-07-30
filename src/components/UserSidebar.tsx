@@ -1,29 +1,23 @@
 'use client';
 
-import { FiMenu, FiLogOut, FiHome, FiList, FiUsers, FiUser } from 'react-icons/fi';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { FiHome, FiFileText, FiBarChart2, FiLogOut, FiMenu } from 'react-icons/fi';
+import React, { Dispatch, SetStateAction } from 'react';
 
-interface SidebarProps {
+interface UserSidebarProps {
   isCollapsed: boolean;
-  setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsCollapsed: Dispatch<SetStateAction<boolean>>;
 }
 
-export default function AdminSidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
+export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const menuItems = [
-    { label: 'Dashboard', href: '/admin/dashboard', icon: <FiHome /> },
-    { label: 'Daftar Ujian', href: '/admin/daftarUjian', icon: <FiList /> },
-    { label: 'Daftar Peserta', href: '/admin/daftarPeserta', icon: <FiUsers /> },
-    { label: 'Profil', href: '/admin/profil', icon: <FiUser /> },
+    { label: 'Beranda', href: '/user/dashboard', icon: <FiHome /> },
+    { label: 'Soal', href: '/user/soal', icon: <FiFileText /> },
+    { label: 'Hasil', href: '/user/hasil', icon: <FiBarChart2 /> },
   ];
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/authentication/login');
-  };
 
   return (
     <div className="fixed top-0 left-0 h-screen z-50">
@@ -32,17 +26,19 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: SidebarPro
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
+        {/* Header & Toggle Button */}
         <div className="flex items-center justify-between px-4 py-6">
-          {!isCollapsed && <span className="text-xl font-bold select-none">Admin</span>}
+          {!isCollapsed && <span className="text-xl font-bold select-none">Menu</span>}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="text-white p-2 rounded hover:bg-gray-800 transition"
-            aria-label="Toggle Sidebar"
+            aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             <FiMenu />
           </button>
         </div>
 
+        {/* Menu Links */}
         <nav className="flex flex-col gap-2 px-2 flex-1">
           {menuItems.map(({ label, href, icon }) => {
             const isActive = pathname === href;
@@ -61,9 +57,13 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: SidebarPro
           })}
         </nav>
 
+        {/* Logout Button */}
         <button
           className="mt-auto mx-2 mb-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-semibold transition flex items-center justify-center gap-2"
-          onClick={handleLogout}
+          onClick={() => {
+            // Tambahkan logout logic di sini
+            alert('Logout dipanggil');
+          }}
         >
           <FiLogOut />
           {!isCollapsed && <span>Keluar</span>}
