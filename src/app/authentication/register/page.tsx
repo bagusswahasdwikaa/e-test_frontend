@@ -100,9 +100,9 @@ export default function RegisterPage() {
             <h2 className="text-2xl font-bold text-center text-white mb-9">Daftar E-Test</h2>
             <form onSubmit={handleSubmit} className="flex flex-col space-y-6 w-full">
               <input
-                type="text"
+                type="number"
                 name="id"
-                placeholder="ID (angka)"
+                placeholder="ID"
                 value={form.id}
                 onChange={handleChange}
                 className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
@@ -115,6 +115,7 @@ export default function RegisterPage() {
                 value={form.firstName}
                 onChange={handleChange}
                 className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+                pattern="[A-Za-z]+"
                 required
               />
               <input
@@ -124,8 +125,10 @@ export default function RegisterPage() {
                 value={form.lastName}
                 onChange={handleChange}
                 className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+                pattern="[A-Za-z]+"
                 required
               />
+
               <input
                 type="email"
                 name="email"

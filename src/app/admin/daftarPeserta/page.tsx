@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import SidebarAdmin from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
 import { useRouter } from 'next/navigation';
+import AdminLayout from '@/components/AdminLayout';
 
 interface Peserta {
   ID_Peserta: number;
@@ -24,7 +23,6 @@ export default function DaftarPesertaPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     async function fetchPeserta() {
@@ -34,7 +32,7 @@ export default function DaftarPesertaPage() {
         const res = await fetch('http://localhost:8000/api/peserta', {
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
             Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
           },
         });
@@ -79,132 +77,109 @@ export default function DaftarPesertaPage() {
   });
 
   return (
-    <div className="flex min-h-screen bg-gray-200">
-      {/* Sidebar */}
-      <SidebarAdmin
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-      />
-
-      {/* Main content wrapper */}
-      <div
-        className={`flex flex-col flex-1 transition-all duration-300 ${
-          isSidebarCollapsed ? 'ml-20' : 'ml-64'
-        }`}
-      >
-        {/* Header */}
-        <AdminHeader
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          isSidebarCollapsed={isSidebarCollapsed}
-        />
-
-        {/* Konten utama */}
-        <main className="flex-1 overflow-auto p-6">
-          {/* Header & tombol tambah */}
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-semibold text-gray-800">
-              Daftar Peserta
-            </h1>
-            <button
-              onClick={() => router.push('/admin/tambahPeserta')}
-              className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
-              type="button"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={3}
-                stroke="currentColor"
-                className="w-5 h-5"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Tambah Data
-            </button>
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div className="mb-4 rounded bg-red-100 p-3 text-red-700 text-sm">
-              <strong>Error:</strong> {error}
-            </div>
-          )}
-
-          {/* Table peserta */}
-          <div className="overflow-auto rounded-lg bg-white shadow">
-            <table className="min-w-full text-sm text-gray-800">
-              <thead className="bg-blue-900 text-white text-center">
-                <tr>
-                  <th className="px-4 py-3">ID Peserta</th>
-                  <th className="px-4 py-3">Nama Lengkap</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-4 text-sm">
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : filteredData.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-4 text-sm text-gray-500">
-                      Tidak ada data ditemukan.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredData.map((peserta) => (
-                    <tr
-                      key={peserta.ID_Peserta}
-                      className="border-t hover:bg-gray-50 text-center"
-                    >
-                      <td className="px-4 py-2">{peserta.ID_Peserta}</td>
-                      <td className="px-4 py-2">{peserta.Nama_Lengkap}</td>
-                      <td className="px-4 py-2">{peserta.Email}</td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            peserta.Status === 'aktif'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-red-700 text-white'
-                          }`}
-                        >
-                          {peserta.Status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 space-x-1">
-                        <a
-                          href={peserta.Aksi.lihat}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
-                        >
-                          Lihat
-                        </a>
-                        <a
-                          href={peserta.Aksi.edit}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
-                        >
-                          Edit
-                        </a>
-                        <a
-                          href={peserta.Aksi.hapus}
-                          className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs"
-                        >
-                          Hapus
-                        </a>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </main>
+    <AdminLayout>
+      {/* Header & tombol tambah */}
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-semibold text-gray-800">
+          Daftar Peserta
+        </h1>
+        <button
+          onClick={() => router.push('/admin/tambahPeserta')}
+          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
+          type="button"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={3}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Tambah Data
+        </button>
       </div>
-    </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 rounded bg-red-100 p-3 text-red-700 text-sm">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+
+      {/* Table peserta */}
+      <div className="overflow-auto rounded-lg bg-white shadow">
+        <table className="min-w-full text-sm text-gray-800">
+          <thead className="bg-blue-900 text-white text-center">
+            <tr>
+              <th className="px-4 py-3">ID Peserta</th>
+              <th className="px-4 py-3">Nama Lengkap</th>
+              <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-sm">
+                  Memuat data...
+                </td>
+              </tr>
+            ) : filteredData.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-sm text-gray-500">
+                  Tidak ada data ditemukan.
+                </td>
+              </tr>
+            ) : (
+              filteredData.map((peserta) => (
+                <tr
+                  key={peserta.ID_Peserta}
+                  className="border-t hover:bg-gray-50 text-center"
+                >
+                  <td className="px-4 py-2">{peserta.ID_Peserta}</td>
+                  <td className="px-4 py-2">{peserta.Nama_Lengkap}</td>
+                  <td className="px-4 py-2">{peserta.Email}</td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        peserta.Status === 'aktif'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-red-700 text-white'
+                      }`}
+                    >
+                      {peserta.Status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 space-x-1">
+                    <a
+                      href={peserta.Aksi.lihat}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                    >
+                      Lihat
+                    </a>
+                    <a
+                      href={peserta.Aksi.edit}
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
+                    >
+                      Edit
+                    </a>
+                    <a
+                      href={peserta.Aksi.hapus}
+                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs"
+                    >
+                      Hapus
+                    </a>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </AdminLayout>
   );
 }

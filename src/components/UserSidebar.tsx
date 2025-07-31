@@ -61,8 +61,9 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
         <button
           className="mt-auto mx-2 mb-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-semibold transition flex items-center justify-center gap-2"
           onClick={() => {
-            // Tambahkan logout logic di sini
-            alert('Logout dipanggil');
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            window.location.href = '/authentication/login'; // Redirect setelah logout
           }}
         >
           <FiLogOut />

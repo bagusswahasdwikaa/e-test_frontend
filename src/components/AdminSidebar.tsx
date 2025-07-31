@@ -22,6 +22,7 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: SidebarPro
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('role');
     router.push('/authentication/login');
   };
 
