@@ -1,13 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+interface AdminLayoutProps {
+  children: React.ReactNode;
+  searchTerm?: string;
+  setSearchTerm?: Dispatch<SetStateAction<string>>;
+}
+
+export default function AdminLayout({
+  children,
+  searchTerm,
+  setSearchTerm,
+}: AdminLayoutProps) {
+  // ✅ Sidebar default tertutup (collapsed)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
@@ -17,7 +28,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const role = localStorage.getItem('role');
 
     if (!token || role !== 'admin') {
-      // Jika tidak ada token atau bukan admin, redirect ke login
       router.replace('/authentication/login');
     } else {
       setIsAuthorized(true);
@@ -26,7 +36,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setCheckingAuth(false);
   }, [router]);
 
-  // Tampilkan loading UI saat sedang cek otorisasi
   if (checkingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 text-gray-600">
@@ -35,10 +44,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // Jangan render konten jika tidak authorized (redirect akan berjalan)
   if (!isAuthorized) return null;
 
-  // ✅ Konten Layout yang dirender jika sudah valid
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
@@ -54,8 +61,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }`}
       >
         <AdminHeader
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
+          searchTerm={searchTerm ?? ''}
+          setSearchTerm={setSearchTerm ?? (() => {})}
           isSidebarCollapsed={isSidebarCollapsed}
         />
         <main className="p-6">{children}</main>

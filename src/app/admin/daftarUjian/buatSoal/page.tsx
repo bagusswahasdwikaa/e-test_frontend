@@ -44,6 +44,7 @@ export default function BuatSoalPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept' : 'aplication/json',
         },
         body: JSON.stringify({
           nama_ujian: formData.nama,
@@ -68,7 +69,7 @@ export default function BuatSoalPage() {
 
       // Navigasi ke form input soal, kirim jumlah soal juga
       router.push(
-        `/admin/daftarUjian/buatSoal/soal/soal?ujian_id=${data.data.id_ujian}&jumlah_soal=${formData.jumlahSoal}`
+        `/admin/daftarUjian/buatSoal/soal/?ujian_id=${data.data.id_ujian}&jumlah_soal=${formData.jumlahSoal}`
       );
     } catch (error) {
       console.error('Terjadi kesalahan:', error);

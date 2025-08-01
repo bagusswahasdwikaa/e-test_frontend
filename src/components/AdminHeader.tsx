@@ -25,7 +25,7 @@ export default function AdminHeader({
         position: 'sticky',
       }}
     >
-      <div className="text-lg font-semibold select-none">Admin Dashboard</div>
+      <div className="text-lg font-semibold select-none">E -Test</div>
 
       {/* Search input */}
       <div className="relative w-1/3 max-w-md">

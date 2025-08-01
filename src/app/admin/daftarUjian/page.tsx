@@ -9,7 +9,7 @@ interface Ujian {
   nama: string;
   tanggal: string;
   durasi: number;
-  status: boolean;
+  status: string;
   kode: string;
   jumlahSoal: number;
 }
@@ -18,29 +18,69 @@ export default function DaftarUjianPage() {
   const router = useRouter();
   const [dataUjian, setDataUjian] = useState<Ujian[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setDataUjian([
-      { id: 1, nama: 'Ujian 1', tanggal: '07 Juli 2025', durasi: 90, status: true, kode: 'UJ001', jumlahSoal: 20 },
-      { id: 2, nama: 'Ujian 2', tanggal: '07 Juli 2025', durasi: 90, status: false, kode: 'UJ002', jumlahSoal: 15 },
-      { id: 3, nama: 'Ujian 3', tanggal: '07 Juli 2025', durasi: 60, status: true, kode: 'UJ003', jumlahSoal: 30 },
-      { id: 4, nama: 'Ujian 4', tanggal: '07 Juli 2025', durasi: 40, status: true, kode: 'UJ004', jumlahSoal: 10 },
-      { id: 5, nama: 'Ujian 5', tanggal: '07 Juli 2025', durasi: 30, status: false, kode: 'UJ005', jumlahSoal: 12 },
-      { id: 6, nama: 'Ujian 6', tanggal: '07 Juli 2025', durasi: 90, status: true, kode: 'UJ006', jumlahSoal: 25 },
-      { id: 7, nama: 'Ujian 7', tanggal: '07 Juli 2025', durasi: 90, status: true, kode: 'UJ007', jumlahSoal: 22 },
-      { id: 8, nama: 'Ujian 8', tanggal: '07 Juli 2025', durasi: 90, status: false, kode: 'UJ008', jumlahSoal: 18 },
-      { id: 9, nama: 'Ujian 9', tanggal: '07 Juli 2025', durasi: 90, status: false, kode: 'UJ009', jumlahSoal: 16 },
-      { id: 10, nama: 'Ujian 10', tanggal: '07 Juli 2025', durasi: 90, status: true, kode: 'UJ010', jumlahSoal: 28 },
-      { id: 11, nama: 'Ujian 11', tanggal: '07 Juli 2025', durasi: 90, status: false, kode: 'UJ011', jumlahSoal: 14 },
-    ]);
+    fetch('http://localhost:8000/api/ujians')
+      .then(async (res) => {
+        const contentType = res.headers.get('Content-Type');
+        if (!res.ok || !contentType?.includes('application/json')) {
+          throw new Error('Respon bukan JSON.');
+        }
+        return res.json();
+      })
+      .then((resJson) => {
+        if (resJson?.data && Array.isArray(resJson.data)) {
+          const mapped = resJson.data.map((item: any) => ({
+            id: item.id_ujian,
+            nama: item.nama_ujian,
+            tanggal: item.tanggal,
+            durasi: parseInt(item.durasi),
+            status: item.status,
+            kode: item.kode_soal,
+            jumlahSoal: parseInt(item.jumlah_soal),
+          }));
+          setDataUjian(mapped);
+        } else {
+          throw new Error('Format data API tidak sesuai.');
+        }
+      })
+      .catch((err) => {
+        console.error('Gagal mengambil data ujian:', err);
+        alert('Gagal memuat daftar ujian. Periksa API backend Anda.');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredData = dataUjian.filter((item) =>
-    item.nama.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDelete = async (id: number) => {
+    if (!confirm('Yakin ingin menghapus ujian ini?')) return;
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/ujians/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Gagal menghapus.');
+
+      alert('Ujian berhasil dihapus.');
+      setDataUjian((prev) => prev.filter((u) => u.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert('Terjadi kesalahan saat menghapus.');
+    }
+  };
+
+  // Filter data berdasarkan nama ujian atau kode soal
+  const filteredData = dataUjian.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      (item.nama || '').toLowerCase().includes(term) ||
+      (item.kode || '').toLowerCase().includes(term)
+    );
+  });
 
   return (
-    <AdminLayout>
+    <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold">Daftar Ujian</h1>
         <button
@@ -61,86 +101,81 @@ export default function DaftarUjianPage() {
         </button>
       </div>
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Cari ujian..."
-          className="border px-3 py-2 rounded w-full max-w-xs"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-auto">
-        <table className="min-w-full text-sm text-gray-800">
-          <thead className="bg-blue-900 text-white text-center">
-            <tr>
-              <th className="px-4 py-3">ID</th>
-              <th className="px-4 py-3">Kode Soal</th>
-              <th className="px-4 py-3">Nama Ujian</th>
-              <th className="px-4 py-3">Tanggal</th>
-              <th className="px-4 py-3">Durasi</th>
-              <th className="px-4 py-3">Jumlah Soal</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredData.length > 0 ? (
-              filteredData.map((ujian) => (
-                <tr key={ujian.id} className="text-center border-t hover:bg-gray-50">
-                  <td className="px-4 py-2">{ujian.id}</td>
-                  <td className="px-4 py-2">{ujian.kode}</td>
-                  <td className="px-4 py-2">{ujian.nama}</td>
-                  <td className="px-4 py-2">{ujian.tanggal}</td>
-                  <td className="px-4 py-2">{ujian.durasi} menit</td>
-                  <td className="px-4 py-2">{ujian.jumlahSoal}</td>
-                  <td className="px-4 py-2">
-                    <button
-                      className={`inline-flex w-10 h-5 rounded-full items-center transition-colors duration-300 ${
-                        ujian.status ? 'bg-green-700' : 'bg-red-900'
-                      }`}
-                      aria-label={ujian.status ? 'Aktif' : 'Tidak aktif'}
-                    >
+      {loading ? (
+        <p className="text-center py-8 text-gray-600">Memuat data ujian...</p>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-auto">
+          <table className="min-w-full text-sm text-gray-800">
+            <thead className="bg-blue-900 text-white text-center">
+              <tr>
+                <th className="px-4 py-3">No</th>
+                <th className="px-4 py-3">Kode Soal</th>
+                <th className="px-4 py-3">Nama Ujian</th>
+                <th className="px-4 py-3">Tanggal</th>
+                <th className="px-4 py-3">Durasi</th>
+                <th className="px-4 py-3">Jumlah Soal</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.length > 0 ? (
+                filteredData.map((ujian, index) => (
+                  <tr key={ujian.id} className="text-center border-t hover:bg-gray-50">
+                    <td className="px-4 py-2">{index + 1}</td>
+                    <td className="px-4 py-2">{ujian.kode}</td>
+                    <td className="px-4 py-2">{ujian.nama}</td>
+                    <td className="px-4 py-2">{ujian.tanggal}</td>
+                    <td className="px-4 py-2">{ujian.durasi} menit</td>
+                    <td className="px-4 py-2">{ujian.jumlahSoal}</td>
+                    <td className="px-4 py-2">
                       <span
-                        className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ${
-                          ujian.status ? 'translate-x-5' : 'translate-x-1'
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                          ujian.status === 'Aktif'
+                            ? 'bg-green-200 text-green-800'
+                            : 'bg-red-200 text-red-800'
                         }`}
-                      />
-                    </button>
-                  </td>
-                  <td className="px-4 py-2 space-x-1">
-                    <button
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
-                      onClick={() => alert(`Lihat Ujian ID ${ujian.id}`)}
-                    >
-                      Lihat
-                    </button>
-                    <button
-                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
-                      onClick={() => alert(`Edit Ujian ID ${ujian.id}`)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs"
-                      onClick={() => alert(`Hapus Ujian ID ${ujian.id}`)}
-                    >
-                      Hapus
-                    </button>
+                      >
+                        {ujian.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 space-x-1">
+                      <button
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                        onClick={() =>
+                          router.push(`/admin/daftarUjian/buatSoal/lihatSoal?ujian_id=${ujian.id}`)
+                        }
+                      >
+                        Lihat
+                      </button>
+                      <button
+                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
+                        onClick={() =>
+                          router.push(`/admin/daftarUjian/edit?ujian_id=${ujian.id}`)
+                        }
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs"
+                        onClick={() => handleDelete(ujian.id)}
+                      >
+                        Hapus
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="text-center text-gray-500 py-4">
+                    Belum ada ujian yang dibuat.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="text-center text-gray-500 py-4">
-                  Tidak ada data ditemukan.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </AdminLayout>
   );
 }

@@ -68,21 +68,21 @@ export default function DaftarPesertaPage() {
     fetchPeserta();
   }, []);
 
-  const filteredData = dataPeserta.filter(({ Nama_Lengkap, Email }) => {
+  // Filter data berdasarkan ID Peserta, Nama Lengkap, atau Email sesuai searchTerm
+  const filteredData = dataPeserta.filter(({ ID_Peserta, Nama_Lengkap, Email }) => {
     const lowerTerm = searchTerm.toLowerCase();
     return (
+      ID_Peserta.toString().includes(searchTerm) || // Pencarian ID_Peserta berdasarkan string
       Nama_Lengkap.toLowerCase().includes(lowerTerm) ||
       Email.toLowerCase().includes(lowerTerm)
     );
   });
 
   return (
-    <AdminLayout>
-      {/* Header & tombol tambah */}
+    // Kirim props searchTerm dan setSearchTerm ke AdminLayout supaya input cari muncul di header
+    <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold text-gray-800">
-          Daftar Peserta
-        </h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Daftar Peserta</h1>
         <button
           onClick={() => router.push('/admin/tambahPeserta')}
           className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
@@ -102,18 +102,17 @@ export default function DaftarPesertaPage() {
         </button>
       </div>
 
-      {/* Error message */}
       {error && (
         <div className="mb-4 rounded bg-red-100 p-3 text-red-700 text-sm">
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      {/* Table peserta */}
       <div className="overflow-auto rounded-lg bg-white shadow">
         <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-blue-900 text-white text-center">
             <tr>
+              <th className="px-4 py-3">No</th>
               <th className="px-4 py-3">ID Peserta</th>
               <th className="px-4 py-3">Nama Lengkap</th>
               <th className="px-4 py-3">Email</th>
@@ -124,52 +123,53 @@ export default function DaftarPesertaPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-4 text-sm">
+                <td colSpan={6} className="text-center py-4 text-sm">
                   Memuat data...
                 </td>
               </tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-4 text-sm text-gray-500">
+                <td colSpan={6} className="text-center py-4 text-sm text-gray-500">
                   Tidak ada data ditemukan.
                 </td>
               </tr>
             ) : (
-              filteredData.map((peserta) => (
+              filteredData.map((peserta, index) => (
                 <tr
                   key={peserta.ID_Peserta}
                   className="border-t hover:bg-gray-50 text-center"
                 >
+                  <td className="px-4 py-2">{index + 1}</td>
                   <td className="px-4 py-2">{peserta.ID_Peserta}</td>
                   <td className="px-4 py-2">{peserta.Nama_Lengkap}</td>
                   <td className="px-4 py-2">{peserta.Email}</td>
                   <td className="px-4 py-2">
                     <span
-                      className={`px-2 py-1 text-xs rounded-full ${
+                      className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
                         peserta.Status === 'aktif'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-red-700 text-white'
+                          ? 'bg-green-200 text-green-800'
+                          : 'bg-red-200 text-red-800'
                       }`}
                     >
-                      {peserta.Status}
+                      {peserta.Status === 'aktif' ? 'Aktif' : 'Tidak Aktif'}
                     </span>
                   </td>
                   <td className="px-4 py-2 space-x-1">
                     <a
                       href={peserta.Aksi.lihat}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs"
                     >
                       Lihat
                     </a>
                     <a
                       href={peserta.Aksi.edit}
-                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-xs"
                     >
                       Edit
                     </a>
                     <a
                       href={peserta.Aksi.hapus}
-                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs"
+                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded text-xs"
                     >
                       Hapus
                     </a>

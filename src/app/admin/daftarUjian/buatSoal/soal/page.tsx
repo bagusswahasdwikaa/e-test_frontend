@@ -28,6 +28,7 @@ export default function SoalBulkPage() {
   const jumlahSoal = jumlahSoalParam ? parseInt(jumlahSoalParam, 10) : 0;
 
   const [soals, setSoals] = useState<SingleSoal[]>([]);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (!ujianId || jumlahSoal <= 0) {
@@ -77,7 +78,6 @@ export default function SoalBulkPage() {
       return;
     }
 
-    // Validasi sederhana
     for (let i = 0; i < soals.length; i++) {
       const s = soals[i];
       if (!s.pertanyaan.trim()) {
@@ -98,12 +98,10 @@ export default function SoalBulkPage() {
         pertanyaan: s.pertanyaan,
         media_type: 'none',
         media_path: null,
-        jawabans: (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(
-          (k) => ({
-            jawaban: s.jawaban[k],
-            is_correct: k === s.jawabanBenar,
-          })
-        ),
+        jawabans: (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => ({
+          jawaban: s.jawaban[k],
+          is_correct: k === s.jawabanBenar,
+        })),
       })),
     };
 
@@ -123,8 +121,7 @@ export default function SoalBulkPage() {
         return;
       }
 
-      alert('Semua soal berhasil disimpan!');
-      router.push('/admin/daftarUjian');
+      setShowModal(true); // Tampilkan modal setelah berhasil
     } catch (error) {
       console.error('Error saat fetch:', error);
       alert('Terjadi kesalahan saat menyimpan soal.');
@@ -137,64 +134,51 @@ export default function SoalBulkPage() {
         <h1 className="text-2xl font-semibold mb-6">
           Tambah {jumlahSoal} Soal untuk Ujian #{ujianId}
         </h1>
+
         <form onSubmit={handleSubmit} className="space-y-8">
           {soals.map((s, idx) => (
-            <div
-              key={idx}
-              className="border p-4 rounded bg-gray-50"
-            >
+            <div key={idx} className="border p-4 rounded bg-gray-50">
               <h2 className="font-medium mb-2">Soal {idx + 1}</h2>
               <textarea
                 className="w-full border rounded p-2 mb-3"
                 placeholder="Tuliskan pertanyaan"
                 value={s.pertanyaan}
-                onChange={(e) =>
-                  handlePertanyaanChange(idx, e.target.value)
-                }
+                onChange={(e) => handlePertanyaanChange(idx, e.target.value)}
                 required
               />
               <div className="grid grid-cols-2 gap-4 mb-3">
-                {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(
-                  (k) => (
-                    <div key={k}>
-                      <label className="block font-sm mb-1">{k}.</label>
-                      <input
-                        type="text"
-                        name={k}
-                        value={s.jawaban[k]}
-                        onChange={(e) =>
-                          handleJawabanChange(idx, k, e.target.value)
-                        }
-                        className="w-full border rounded px-3 py-2"
-                        required
-                      />
-                    </div>
-                  )
-                )}
+                {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => (
+                  <div key={k}>
+                    <label className="block font-sm mb-1">{k}.</label>
+                    <input
+                      type="text"
+                      name={k}
+                      value={s.jawaban[k]}
+                      onChange={(e) => handleJawabanChange(idx, k, e.target.value)}
+                      className="w-full border rounded px-3 py-2"
+                      required
+                    />
+                  </div>
+                ))}
               </div>
               <div className="mb-2">
-                <label className="block mb-1 font-medium">
-                  Jawaban Benar:
-                </label>
+                <label className="block mb-1 font-medium">Jawaban Benar:</label>
                 <select
                   value={s.jawabanBenar}
-                  onChange={(e) =>
-                    handleJawabanBenarChange(idx, e.target.value as any)
-                  }
+                  onChange={(e) => handleJawabanBenarChange(idx, e.target.value as any)}
                   className="border rounded px-3 py-2"
                   required
                 >
-                  {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(
-                    (k) => (
-                      <option key={k} value={k}>
-                        {k}
-                      </option>
-                    )
-                  )}
+                  {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
           ))}
+
           <div className="flex justify-end">
             <button
               type="submit"
@@ -205,6 +189,30 @@ export default function SoalBulkPage() {
           </div>
         </form>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+            <h2 className="text-lg font-semibold mb-4">Berhasil!</h2>
+            <p className="mb-6">Soal berhasil disimpan. Ingin melihat preview soal?</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => router.push(`/admin/daftarUjian/buatSoal/lihatSoal/?ujian_id=${ujianId}`)}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                Lihat Soal
+              </button>
+              <button
+                onClick={() => router.push('/admin/daftarUjian')}
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                Kembali
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
