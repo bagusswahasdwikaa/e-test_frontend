@@ -28,12 +28,23 @@ export default function DaftarPesertaPage() {
     async function fetchPeserta() {
       setLoading(true);
       setError(null);
+
+      // Ambil token dari localStorage
+      const token = localStorage.getItem('token');
+      const role = localStorage.getItem('role');
+
+      if (!token || role !== 'admin') {
+        // Jika tidak ada token atau bukan admin, redirect ke login
+        router.push('/authentication/login');
+        return;
+      }
+
       try {
         const res = await fetch('http://localhost:8000/api/peserta', {
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`,
+            Authorization: `Bearer ${token}`, // pakai token dari localStorage
           },
         });
 
@@ -65,8 +76,9 @@ export default function DaftarPesertaPage() {
         setLoading(false);
       }
     }
+
     fetchPeserta();
-  }, []);
+  }, [router]);
 
   // Filter data berdasarkan ID Peserta, Nama Lengkap, atau Email sesuai searchTerm
   const filteredData = dataPeserta.filter(({ ID_Peserta, Nama_Lengkap, Email }) => {
@@ -79,12 +91,11 @@ export default function DaftarPesertaPage() {
   });
 
   return (
-    // Kirim props searchTerm dan setSearchTerm ke AdminLayout supaya input cari muncul di header
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold text-gray-800">Daftar Peserta</h1>
         <button
-          onClick={() => router.push('/admin/tambahPeserta')}
+          onClick={() => router.push('/admin/daftarPeserta/tambahPeserta')}
           className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
           type="button"
         >

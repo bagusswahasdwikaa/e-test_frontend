@@ -13,6 +13,9 @@ type JawabanOptions = {
 
 type SingleSoal = {
   pertanyaan: string;
+  mediaFile: File | null;
+  mediaPreviewUrl: string | null;
+  mediaType: 'none' | 'image' | 'video';
   jawaban: JawabanOptions;
   jawabanBenar: keyof JawabanOptions;
 };
@@ -39,6 +42,9 @@ export default function SoalBulkPage() {
 
     const initialSoals: SingleSoal[] = Array.from({ length: jumlahSoal }, () => ({
       pertanyaan: '',
+      mediaFile: null,
+      mediaPreviewUrl: null,
+      mediaType: 'none',
       jawaban: { A: '', B: '', C: '', D: '' },
       jawabanBenar: 'A',
     }));
@@ -48,6 +54,30 @@ export default function SoalBulkPage() {
   const handlePertanyaanChange = (index: number, value: string) => {
     const updated = [...soals];
     updated[index].pertanyaan = value;
+    setSoals(updated);
+  };
+
+  const handleMediaChange = (index: number, file: File | null) => {
+    const updated = [...soals];
+    if (file) {
+      updated[index].mediaFile = file;
+      updated[index].mediaPreviewUrl = URL.createObjectURL(file);
+
+      if (file.type.startsWith('image/')) {
+        updated[index].mediaType = 'image';
+      } else if (file.type.startsWith('video/')) {
+        updated[index].mediaType = 'video';
+      } else {
+        updated[index].mediaType = 'none';
+        updated[index].mediaFile = null;
+        updated[index].mediaPreviewUrl = null;
+        alert('Hanya file gambar atau video yang diperbolehkan.');
+      }
+    } else {
+      updated[index].mediaFile = null;
+      updated[index].mediaPreviewUrl = null;
+      updated[index].mediaType = 'none';
+    }
     setSoals(updated);
   };
 
@@ -78,6 +108,7 @@ export default function SoalBulkPage() {
       return;
     }
 
+    // Validasi isi soal
     for (let i = 0; i < soals.length; i++) {
       const s = soals[i];
       if (!s.pertanyaan.trim()) {
@@ -92,26 +123,29 @@ export default function SoalBulkPage() {
       }
     }
 
-    const payload = {
-      ujian_id: ujianId,
-      soals: soals.map((s) => ({
-        pertanyaan: s.pertanyaan,
-        media_type: 'none',
-        media_path: null,
-        jawabans: (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => ({
-          jawaban: s.jawaban[k],
-          is_correct: k === s.jawabanBenar,
-        })),
-      })),
-    };
+    // Siapkan FormData untuk multipart upload
+    const formData = new FormData();
+    formData.append('ujian_id', ujianId.toString());
+
+    soals.forEach((s, idx) => {
+      formData.append(`soals[${idx}][pertanyaan]`, s.pertanyaan);
+      formData.append(`soals[${idx}][media_type]`, s.mediaType);
+      if (s.mediaFile) {
+        formData.append(`soals[${idx}][media_file]`, s.mediaFile);
+      }
+      ['A', 'B', 'C', 'D'].forEach((key) => {
+        formData.append(`soals[${idx}][jawabans][${key}][jawaban]`, s.jawaban[key as keyof JawabanOptions]);
+        formData.append(
+          `soals[${idx}][jawabans][${key}][is_correct]`,
+          (key === s.jawabanBenar ? '1' : '0')
+        );
+      });
+    });
 
     try {
       const response = await fetch('http://localhost:8000/api/soals/bulk', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+        body: formData, // multipart/form-data otomatis ditangani browser
       });
 
       if (!response.ok) {
@@ -139,6 +173,8 @@ export default function SoalBulkPage() {
           {soals.map((s, idx) => (
             <div key={idx} className="border p-4 rounded bg-gray-50">
               <h2 className="font-medium mb-2">Soal {idx + 1}</h2>
+
+              {/* Input Teks Pertanyaan */}
               <textarea
                 className="w-full border rounded p-2 mb-3"
                 placeholder="Tuliskan pertanyaan"
@@ -146,6 +182,40 @@ export default function SoalBulkPage() {
                 onChange={(e) => handlePertanyaanChange(idx, e.target.value)}
                 required
               />
+
+              {/* Input Upload Media */}
+              <div className="mb-3">
+                <label className="block mb-1 font-medium">Upload Media (Gambar/Video)</label>
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={(e) =>
+                    handleMediaChange(idx, e.target.files ? e.target.files[0] : null)
+                  }
+                />
+              </div>
+
+              {/* Preview Media */}
+              {s.mediaPreviewUrl && (
+                <div className="mb-3">
+                  {s.mediaType === 'image' && (
+                    <img
+                      src={s.mediaPreviewUrl}
+                      alt={`Preview media soal ${idx + 1}`}
+                      className="max-w-full max-h-60 rounded"
+                    />
+                  )}
+                  {s.mediaType === 'video' && (
+                    <video
+                      src={s.mediaPreviewUrl}
+                      controls
+                      className="max-w-full max-h-60 rounded"
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Jawaban Pilihan */}
               <div className="grid grid-cols-2 gap-4 mb-3">
                 {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => (
                   <div key={k}>
@@ -161,11 +231,13 @@ export default function SoalBulkPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Jawaban Benar */}
               <div className="mb-2">
                 <label className="block mb-1 font-medium">Jawaban Benar:</label>
                 <select
                   value={s.jawabanBenar}
-                  onChange={(e) => handleJawabanBenarChange(idx, e.target.value as any)}
+                  onChange={(e) => handleJawabanBenarChange(idx, e.target.value as keyof JawabanOptions)}
                   className="border rounded px-3 py-2"
                   required
                 >
@@ -190,7 +262,6 @@ export default function SoalBulkPage() {
         </form>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
@@ -198,7 +269,9 @@ export default function SoalBulkPage() {
             <p className="mb-6">Soal berhasil disimpan. Ingin melihat preview soal?</p>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => router.push(`/admin/daftarUjian/buatSoal/lihatSoal/?ujian_id=${ujianId}`)}
+                onClick={() =>
+                  router.push(`/admin/daftarUjian/buatSoal/lihatSoal/?ujian_id=${ujianId}`)
+                }
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
               >
                 Lihat Soal
