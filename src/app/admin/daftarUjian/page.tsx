@@ -143,7 +143,7 @@ export default function DaftarUjianPage() {
                       <button
                         className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
                         onClick={() =>
-                          router.push(`/admin/daftarUjian/buatSoal/lihatSoal?ujian_id=${ujian.id}`)
+                          router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${ujian.id}`)
                         }
                       >
                         Lihat
@@ -151,7 +151,7 @@ export default function DaftarUjianPage() {
                       <button
                         className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
                         onClick={() =>
-                          router.push(`/admin/daftarUjian/edit?ujian_id=${ujian.id}`)
+                          router.push(`/admin/daftarUjian/editUjian?ujian_id=${ujian.id}`)
                         }
                       >
                         Edit

@@ -4,16 +4,18 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 
-type RawJawaban = {
-  jawaban: string;
-  is_correct: boolean | number | string;
+type RawJawabanObj = {
+  [key: string]: {
+    jawaban: string;
+    is_correct: boolean | number | string;
+  };
 };
 
 type RawSoal = {
   pertanyaan: string;
   media_type: 'none' | 'image' | 'video';
   media_path: string | null;
-  jawabans: RawJawaban[];
+  jawabans: RawJawabanObj;
 };
 
 type NormalizedJawaban = {
@@ -39,24 +41,40 @@ export default function LihatSoalPage() {
 
     fetch(`http://localhost:8000/api/soals/by-ujian/${ujianId}`)
       .then((res) => res.json())
-      .then((data: RawSoal[]) => {
-        const normalizedData: Soal[] = data.map((soal) => ({
-          pertanyaan: soal.pertanyaan,
-          media_type: soal.media_type,
-          media_path: soal.media_path,
-          jawabans: soal.jawabans.map((j) => ({
-            jawaban: j.jawaban,
-            is_correct:
-              j.is_correct === true ||
-              j.is_correct === 1 ||
-              j.is_correct === '1' ||
-              j.is_correct === 'true',
-          })),
-        }));
+      .then(({ data }: { data: RawSoal[] }) => {
+        // data adalah array soal
+
+        const normalizedData: Soal[] = data.map((soal) => {
+          // Jawabans backend berupa object {A: {...}, B: {...}, C: {...}, D: {...}}
+          // Konversi ke array berurutan A-D
+          const keys = ['A', 'B', 'C', 'D'];
+          const normalizedJawabans: NormalizedJawaban[] = keys.map((key) => {
+            const jaw = soal.jawabans[key];
+            return {
+              jawaban: jaw?.jawaban || '',
+              is_correct:
+                jaw?.is_correct === true ||
+                jaw?.is_correct === 1 ||
+                jaw?.is_correct === '1' ||
+                jaw?.is_correct === 'true' ||
+                false,
+            };
+          });
+
+          return {
+            pertanyaan: soal.pertanyaan,
+            media_type: soal.media_type,
+            media_path: soal.media_path,
+            jawabans: normalizedJawabans,
+          };
+        });
 
         setSoals(normalizedData);
       })
-      .catch((err) => console.error('Gagal mengambil soal:', err));
+      .catch((err) => {
+        console.error('Gagal mengambil soal:', err);
+        alert('Gagal memuat soal.');
+      });
   }, [ujianId]);
 
   const renderMedia = (mediaType: string, mediaPath: string | null) => {

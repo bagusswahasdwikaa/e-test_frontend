@@ -270,7 +270,7 @@ export default function SoalBulkPage() {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() =>
-                  router.push(`/admin/daftarUjian/buatSoal/lihatSoal/?ujian_id=${ujianId}`)
+                  router.push(`/admin/daftarUjian/lihatSoal/?ujian_id=${ujianId}`)
                 }
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
               >
