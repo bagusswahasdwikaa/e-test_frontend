@@ -14,11 +14,15 @@ interface Ujian {
   jumlahSoal: number;
 }
 
+type SortDirection = 'asc' | 'desc';
+
 export default function DaftarUjianPage() {
   const router = useRouter();
   const [dataUjian, setDataUjian] = useState<Ujian[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   useEffect(() => {
     fetch('http://localhost:8000/api/ujians')
@@ -52,6 +56,56 @@ export default function DaftarUjianPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleToggleSort = () => {
+    setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+  };
+
+  const filteredData = dataUjian.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      (item.nama || '').toLowerCase().includes(term) ||
+      (item.kode || '').toLowerCase().includes(term)
+    );
+  });
+
+  const sortedData = React.useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      const aDate = new Date(a.tanggal);
+      const bDate = new Date(b.tanggal);
+
+      if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
+      if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredData, sortDirection]);
+
+  const SortArrow = () => (
+    <button
+      onClick={handleToggleSort}
+      aria-label="Toggle sort tanggal"
+      className="select-none"
+      style={{
+        fontSize: 12,
+        userSelect: 'none',
+        lineHeight: 1,
+        padding: 0,
+        border: 'none',
+        background: 'none',
+        cursor: 'pointer',
+        color: '#E5E7EB', // abu terang (gray-200)
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 14,
+        height: 14,
+        margin: 0,
+      }}
+      type="button"
+    >
+      {sortDirection === 'asc' ? '▲' : '▼'}
+    </button>
+  );
+
   const handleDelete = async (id: number) => {
     if (!confirm('Yakin ingin menghapus ujian ini?')) return;
 
@@ -69,15 +123,6 @@ export default function DaftarUjianPage() {
       alert('Terjadi kesalahan saat menghapus.');
     }
   };
-
-  // Filter data berdasarkan nama ujian atau kode soal
-  const filteredData = dataUjian.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      (item.nama || '').toLowerCase().includes(term) ||
-      (item.kode || '').toLowerCase().includes(term)
-    );
-  });
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
@@ -108,7 +153,23 @@ export default function DaftarUjianPage() {
           <table className="min-w-full text-sm text-gray-800">
             <thead className="bg-blue-900 text-white text-center">
               <tr>
-                <th className="px-4 py-3">No</th>
+                {/* Header No dengan flex container agar ikon dan teks sejajar */}
+                <th
+                  className="px-4 py-3 whitespace-nowrap text-center"
+                  style={{ minWidth: 70, width: 70 }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <SortArrow />
+                    <span>No</span>
+                  </div>
+                </th>
                 <th className="px-4 py-3">Kode Soal</th>
                 <th className="px-4 py-3">Nama Ujian</th>
                 <th className="px-4 py-3">Tanggal</th>
@@ -119,10 +180,16 @@ export default function DaftarUjianPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredData.length > 0 ? (
-                filteredData.map((ujian, index) => (
+              {sortedData.length > 0 ? (
+                sortedData.map((ujian, index) => (
                   <tr key={ujian.id} className="text-center border-t hover:bg-gray-50">
-                    <td className="px-4 py-2">{index + 1}</td>
+                    {/* Cell No dengan width dan text-center agar sejajar */}
+                    <td
+                      className="px-4 py-2 text-center"
+                      style={{ minWidth: 70, width: 70 }}
+                    >
+                      {index + 1}
+                    </td>
                     <td className="px-4 py-2">{ujian.kode}</td>
                     <td className="px-4 py-2">{ujian.nama}</td>
                     <td className="px-4 py-2">{ujian.tanggal}</td>

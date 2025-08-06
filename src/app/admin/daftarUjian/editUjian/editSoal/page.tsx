@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 
 type JawabanOptions = { A: string; B: string; C: string; D: string };
+
 type SoalData = {
-  id: number | null;  // Bisa null untuk soal baru yang belum punya id
+  id: number | null; // null untuk soal baru
   pertanyaan: string;
   mediaType: 'none' | 'image' | 'video';
   jawaban: JawabanOptions;
@@ -16,6 +17,24 @@ type SoalData = {
 type UjianData = {
   id_ujian: number;
   jumlah_soal: number;
+};
+
+type JawabanItem = {
+  jawaban: string;
+  is_correct: boolean | number | string;
+};
+
+type SoalApiItem = {
+  id: number;
+  pertanyaan: string;
+  media_type: 'none' | 'image' | 'video';
+  media_path: string | null;
+  jawabans: {
+    A?: JawabanItem;
+    B?: JawabanItem;
+    C?: JawabanItem;
+    D?: JawabanItem;
+  };
 };
 
 export default function EditSoalPage() {
@@ -36,7 +55,6 @@ export default function EditSoalPage() {
       return;
     }
 
-    // Fetch data ujian dulu untuk jumlah_soal
     const fetchUjian = async () => {
       try {
         const resUjian = await fetch(`http://localhost:8000/api/ujians/${ujianId}`);
@@ -50,15 +68,14 @@ export default function EditSoalPage() {
       }
     };
 
-    // Fetch soal terkait ujian
     const fetchSoal = async () => {
       try {
         const res = await fetch(`http://localhost:8000/api/ujians/${ujianId}/soals`);
         if (!res.ok) throw new Error('Gagal fetch soal');
         const json = await res.json();
-        const arr = Array.isArray(json.data) ? json.data : [];
+        const arr: SoalApiItem[] = Array.isArray(json.data) ? json.data : [];
 
-        const soalList = arr.map((item: any) => {
+        const soalList: SoalData[] = arr.map((item: SoalApiItem) => {
           const jaw = item.jawabans || {};
           const jawOps: JawabanOptions = {
             A: jaw.A?.jawaban || '',
@@ -67,11 +84,10 @@ export default function EditSoalPage() {
             D: jaw.D?.jawaban || '',
           };
 
-          const correctAnswerKey = (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[])
-            .find(k => {
-              const val = jaw[k]?.is_correct;
-              return val === true || val === '1' || val === 1 || val === 'true';
-            }) || 'A';
+          const correctAnswerKey = (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).find(k => {
+            const val = jaw[k]?.is_correct;
+            return val === true || val === '1' || val === 1 || val === 'true';
+          }) || 'A';
 
           return {
             id: item.id,
@@ -79,15 +95,14 @@ export default function EditSoalPage() {
             mediaType: item.media_type,
             jawaban: jawOps,
             jawabanBenar: correctAnswerKey,
-          } as SoalData;
+          };
         });
 
-        // Jika soal yang didapat kurang dari jumlah_soal, tambahkan soal kosong
         if (ujian && ujian.jumlah_soal > soalList.length) {
           const kurang = ujian.jumlah_soal - soalList.length;
           for (let i = 0; i < kurang; i++) {
             soalList.push({
-              id: null, // null karena soal baru belum ada di DB
+              id: null,
               pertanyaan: '',
               mediaType: 'none',
               jawaban: { A: '', B: '', C: '', D: '' },
@@ -95,25 +110,16 @@ export default function EditSoalPage() {
             });
           }
         } else if (ujian && ujian.jumlah_soal < soalList.length) {
-          // Jika soal lebih banyak dari jumlah_soal, potong saja
           soalList.splice(ujian.jumlah_soal);
         }
 
         setSoals(soalList);
 
-        // Set preview media
-        arr.forEach((item: any) => {
-          if (item.media_path) {
-            setPreviews(prev => ({
-              ...prev,
-              [item.id]: `http://localhost:8000/storage/${item.media_path}`
-            }));
-          } else {
-            setPreviews(prev => ({
-              ...prev,
-              [item.id]: null
-            }));
-          }
+        arr.forEach(item => {
+          setPreviews(prev => ({
+            ...prev,
+            [item.id]: item.media_path ? `http://localhost:8000/storage/${item.media_path}` : null,
+          }));
         });
       } catch (error) {
         console.error(error);
@@ -128,7 +134,6 @@ export default function EditSoalPage() {
       await fetchUjian();
       await fetchSoal();
     })();
-
   }, [ujianId, router, ujian?.jumlah_soal]);
 
   const onChangeSoal = (
@@ -152,16 +157,23 @@ export default function EditSoalPage() {
   };
 
   const onMediaChange = (id: number | null, file: File | null) => {
-    if (id === null) return; // soal baru belum bisa upload media (optional)
+    if (id === null) {
+      alert('Media hanya bisa di-upload untuk soal yang sudah tersimpan.');
+      return;
+    }
 
     setMediaFiles(prev => ({ ...prev, [id]: file }));
     setPreviews(prev => ({
       ...prev,
-      [id]: file ? URL.createObjectURL(file) : null
+      [id]: file ? URL.createObjectURL(file) : null,
     }));
 
     if (file) {
-      const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'none';
+      const type = file.type.startsWith('image/')
+        ? 'image'
+        : file.type.startsWith('video/')
+          ? 'video'
+          : 'none';
       onChangeSoal(id, 'mediaType', type);
     } else {
       onChangeSoal(id, 'mediaType', 'none');
@@ -171,13 +183,18 @@ export default function EditSoalPage() {
   const submitAll = async () => {
     setSaving(true);
     try {
-      // Submit soal satu per satu
       for (const s of soals) {
+        // Skip soal kosong tanpa pertanyaan dan jawaban
+        if (!s.pertanyaan.trim()) continue;
+
         const form = new FormData();
         form.append('pertanyaan', s.pertanyaan);
         form.append('media_type', s.mediaType);
 
-        form.append('_method', 'PUT');
+        // For update
+        if (s.id) {
+          form.append('_method', 'PUT');
+        }
 
         if (s.id && mediaFiles[s.id]) {
           form.append('media_file', mediaFiles[s.id]!);
@@ -190,33 +207,34 @@ export default function EditSoalPage() {
 
         let url = '';
         let method = '';
+
         if (s.id) {
-          // Soal sudah ada, update
           url = `http://localhost:8000/api/soals/${s.id}`;
           method = 'POST'; // POST + _method=PUT override
         } else {
-          // Soal baru, buat baru
-          url = `http://localhost:8000/api/ujians/${ujianId}/soals`;
+          url = `http://localhost:8000/api/soals`;
           method = 'POST';
+          form.append('ujian_id', ujianId ?? '');
         }
 
         const res = await fetch(url, {
           method,
           body: form,
+          headers: {
+            // Note: Don't set Content-Type, browser will set with boundary
+          },
         });
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           console.error('Error response:', errData);
-          alert(`Gagal memperbarui soal`);
+          alert('Gagal memperbarui soal');
           setSaving(false);
           return;
         }
       }
 
       alert('Semua soal berhasil diperbarui');
-
-      // Setelah berhasil simpan, redirect ke daftarUjian
       router.push('/admin/daftarUjian');
     } catch (error) {
       console.error(error);
@@ -246,7 +264,7 @@ export default function EditSoalPage() {
               <input
                 type="file"
                 accept="image/*,video/*"
-                disabled={s.id === null} // Nonaktifkan upload media untuk soal baru
+                disabled={s.id === null} // Disable upload for new soal
                 onChange={e => onMediaChange(s.id, e.target.files?.[0] ?? null)}
               />
               {previews[s.id ?? `new-${idx}`] && (

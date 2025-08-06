@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 
+type SortDirection = 'asc' | 'desc';
+
 interface Peserta {
   ID_Peserta: number;
   Nama_Lengkap: string;
@@ -23,18 +25,17 @@ export default function DaftarPesertaPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   useEffect(() => {
     async function fetchPeserta() {
       setLoading(true);
       setError(null);
 
-      // Ambil token dari localStorage
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
 
       if (!token || role !== 'admin') {
-        // Jika tidak ada token atau bukan admin, redirect ke login
         router.push('/authentication/login');
         return;
       }
@@ -44,7 +45,7 @@ export default function DaftarPesertaPage() {
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
-            Authorization: `Bearer ${token}`, // pakai token dari localStorage
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -80,15 +81,37 @@ export default function DaftarPesertaPage() {
     fetchPeserta();
   }, [router]);
 
-  // Filter data berdasarkan ID Peserta, Nama Lengkap, atau Email sesuai searchTerm
+  const handleToggleSort = () => {
+    setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+  };
+
   const filteredData = dataPeserta.filter(({ ID_Peserta, Nama_Lengkap, Email }) => {
     const lowerTerm = searchTerm.toLowerCase();
     return (
-      ID_Peserta.toString().includes(searchTerm) || // Pencarian ID_Peserta berdasarkan string
+      ID_Peserta.toString().includes(searchTerm) ||
       Nama_Lengkap.toLowerCase().includes(lowerTerm) ||
       Email.toLowerCase().includes(lowerTerm)
     );
   });
+
+  const sortedData = React.useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      if (a.ID_Peserta < b.ID_Peserta) return sortDirection === 'asc' ? -1 : 1;
+      if (a.ID_Peserta > b.ID_Peserta) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredData, sortDirection]);
+
+  const SortArrow = () => (
+    <button
+      onClick={handleToggleSort}
+      aria-label="Toggle sort"
+      className="text-xs text-gray-200 hover:text-white focus:outline-none"
+      type="button"
+    >
+      {sortDirection === 'asc' ? '▲' : '▼'}
+    </button>
+  );
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
@@ -120,15 +143,30 @@ export default function DaftarPesertaPage() {
       )}
 
       <div className="overflow-auto rounded-lg bg-white shadow">
-        <table className="min-w-full text-sm text-gray-800">
+        <table className="min-w-full text-sm text-gray-800 border-collapse">
           <thead className="bg-blue-900 text-white text-center">
             <tr>
-              <th className="px-4 py-3">No</th>
-              <th className="px-4 py-3">ID Peserta</th>
-              <th className="px-4 py-3">Nama Lengkap</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Aksi</th>
+              <th className="px-4 py-3 text-center" style={{ minWidth: 70 }}>
+                <div className="flex items-center justify-center gap-1">
+                  <SortArrow />
+                  <span>No</span>
+                </div>
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap" style={{ minWidth: 120 }}>
+                ID Peserta
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap" style={{ minWidth: 180 }}>
+                Nama Lengkap
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap" style={{ minWidth: 200 }}>
+                Email
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap" style={{ minWidth: 120 }}>
+                Status
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap" style={{ minWidth: 180 }}>
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -138,14 +176,14 @@ export default function DaftarPesertaPage() {
                   Memuat data...
                 </td>
               </tr>
-            ) : filteredData.length === 0 ? (
+            ) : sortedData.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-4 text-sm text-gray-500">
                   Tidak ada data ditemukan.
                 </td>
               </tr>
             ) : (
-              filteredData.map((peserta, index) => (
+              sortedData.map((peserta, index) => (
                 <tr
                   key={peserta.ID_Peserta}
                   className="border-t hover:bg-gray-50 text-center"

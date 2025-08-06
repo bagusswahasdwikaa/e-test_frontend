@@ -166,7 +166,7 @@ export default function SoalBulkPage() {
     <AdminLayout>
       <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow mt-6">
         <h1 className="text-2xl font-semibold mb-6">
-          Tambah {jumlahSoal} Soal untuk Ujian #{ujianId}
+          Buat soal {jumlahSoal} 
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-8">
