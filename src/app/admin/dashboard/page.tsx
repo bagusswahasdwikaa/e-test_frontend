@@ -88,6 +88,12 @@ export default function AdminDashboard() {
     setMonthRange([null, null]);
   };
 
+  const handleExportExcel = () => {
+    const exportUrl = 'http://127.0.0.1:8000/api/nilai-peserta/export';
+    window.open(exportUrl, '_blank');
+  };
+
+
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       <h1 className="text-2xl font-semibold mb-5 text-gray-800">
@@ -97,62 +103,60 @@ export default function AdminDashboard() {
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-6 mb-6 max-w-5xl">
         {/* Filter Bulan Rentang */}
-        <div className="flex items-center gap-2">
-          <label className="font-medium text-gray-700 whitespace-nowrap">
-            Rentang Bulan:
-          </label>
-          <DatePicker
-            selectsRange
-            startDate={monthRange[0]}
-            endDate={monthRange[1]}
-            onChange={(update) => {
-              const [start, end] = update as [Date | null, Date | null];
-              if (start && end && !isValidMonthRange(start, end)) {
-                alert('Maksimal rentang 6 bulan');
-                return;
-              }
-              setMonthRange([start, end]);
-            }}
-            dateFormat="MM/yyyy"
-            showMonthYearPicker
-            placeholderText="Pilih rentang bulan"
-            className="rounded-md border border-gray-300 py-1.5 px-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44"
-            // supaya input tidak bisa diketik manual (disable typing)
-            onChangeRaw={(event) => event?.preventDefault?.()}
-            // filter agar bulan tidak bisa dipilih lebih dari 6 bulan dari start
-            filterDate={isSelectableDate}
-          />
-          {/* Tombol batal untuk reset filter bulan */}
-          {(monthRange[0] || monthRange[1]) && (
-            <button
-              className="ml-2 px-3 py-1 text-sm bg-gray-300 rounded hover:bg-gray-400"
-              onClick={cancelMonthFilter}
-              type="button"
+          <div className="flex items-center gap-2">
+            <label className="font-medium text-gray-700 whitespace-nowrap">
+              Rentang Bulan:
+            </label>
+            <DatePicker
+              selectsRange
+              startDate={monthRange[0]}
+              endDate={monthRange[1]}
+              onChange={(update) => {
+                const [start, end] = update as [Date | null, Date | null];
+                if (start && end && !isValidMonthRange(start, end)) {
+                  alert('Maksimal rentang 6 bulan');
+                  return;
+                }
+                setMonthRange([start, end]);
+              }}
+              dateFormat="MM/yyyy"
+              showMonthYearPicker
+              placeholderText="Pilih rentang bulan"
+              className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44"
+              onChangeRaw={(event) => event?.preventDefault?.()}
+              filterDate={isSelectableDate}
+            />
+            {(monthRange[0] || monthRange[1]) && (
+              <button
+                className="ml-2 px-3 py-1 text-sm bg-gray-300 rounded hover:bg-gray-400"
+                onClick={cancelMonthFilter}
+                type="button"
+              >
+                Batal
+              </button>
+            )}
+          </div>
+          {/* Filter Status */}
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <label
+              htmlFor="filterStatus"
+              className="font-medium text-gray-700 select-none"
             >
-              Batal
-            </button>
-          )}
+              Filter Status:
+            </label>
+            <select
+              id="filterStatus"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-36 rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm
+                focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out"
+            >
+              <option value="">Semua Status</option>
+              <option value="Selesai">Selesai</option>
+              <option value="Belum Dikerjakan">Belum Dikerjakan</option>
+            </select>
+          </div>
         </div>
-
-        {/* Filter Status */}
-        <div className="flex items-center gap-2 whitespace-nowrap">
-          <label htmlFor="filterStatus" className="font-medium text-gray-700 select-none">
-            Filter Status:
-          </label>
-          <select
-            id="filterStatus"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-36 rounded-md border border-gray-300 bg-white py-1.5 px-2 text-sm text-gray-700 shadow-sm
-              focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out"
-          >
-            <option value="">Semua Status</option>
-            <option value="Selesai">Selesai</option>
-            <option value="Belum Dikerjakan">Belum Dikerjakan</option>
-          </select>
-        </div>
-      </div>
-
       {/* Table */}
       {loading ? (
         <p className="text-gray-600">Memuat data...</p>
@@ -222,7 +226,7 @@ export default function AdminDashboard() {
       <div className="mt-6 flex justify-end">
         <button
           className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
-          onClick={() => alert('Fitur Unduh belum tersedia')}
+          onClick={handleExportExcel}
         >
           Unduh Excel
         </button>

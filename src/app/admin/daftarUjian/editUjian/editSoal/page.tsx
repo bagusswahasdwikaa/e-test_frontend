@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import { v4 as uuidv4 } from 'uuid';
 
 type JawabanOptions = { A: string; B: string; C: string; D: string };
 
 type SoalData = {
-  id: number | null; // null untuk soal baru
+  id: number | null;
+  localId: string;
   pertanyaan: string;
   mediaType: 'none' | 'image' | 'video';
   jawaban: JawabanOptions;
@@ -43,12 +45,13 @@ export default function EditSoalPage() {
   const ujianId = params.get('ujian_id');
 
   const [soals, setSoals] = useState<SoalData[]>([]);
-  const [mediaFiles, setMediaFiles] = useState<Record<number | string, File | null>>({});
-  const [previews, setPreviews] = useState<Record<number | string, string | null>>({});
+  const [mediaFiles, setMediaFiles] = useState<Record<string, File | null>>({});
+  const [previews, setPreviews] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ujian, setUjian] = useState<UjianData | null>(null);
 
+  // Fetch ujian terlebih dahulu, lalu fetch soal
   useEffect(() => {
     if (!ujianId) {
       router.push('/admin/daftarUjian');
@@ -57,25 +60,27 @@ export default function EditSoalPage() {
 
     const fetchUjian = async () => {
       try {
-        const resUjian = await fetch(`http://localhost:8000/api/ujians/${ujianId}`);
+        const resUjian = await fetch(`http://127.0.0.1:8000/api/ujians/${ujianId}`);
         if (!resUjian.ok) throw new Error('Gagal fetch ujian');
         const ujianData: UjianData = await resUjian.json();
         setUjian(ujianData);
+        return ujianData;
       } catch (error) {
         console.error(error);
         alert('Gagal memuat data ujian.');
         router.push('/admin/daftarUjian');
+        return null;
       }
     };
 
-    const fetchSoal = async () => {
+    const fetchSoal = async (jumlahSoal: number) => {
       try {
-        const res = await fetch(`http://localhost:8000/api/ujians/${ujianId}/soals`);
+        const res = await fetch(`http://127.0.0.1:8000/api/ujians/${ujianId}/soals`);
         if (!res.ok) throw new Error('Gagal fetch soal');
         const json = await res.json();
         const arr: SoalApiItem[] = Array.isArray(json.data) ? json.data : [];
 
-        const soalList: SoalData[] = arr.map((item: SoalApiItem) => {
+        let soalList: SoalData[] = arr.map((item: SoalApiItem) => {
           const jaw = item.jawabans || {};
           const jawOps: JawabanOptions = {
             A: jaw.A?.jawaban || '',
@@ -91,6 +96,7 @@ export default function EditSoalPage() {
 
           return {
             id: item.id,
+            localId: uuidv4(),
             pertanyaan: item.pertanyaan,
             mediaType: item.media_type,
             jawaban: jawOps,
@@ -98,29 +104,31 @@ export default function EditSoalPage() {
           };
         });
 
-        if (ujian && ujian.jumlah_soal > soalList.length) {
-          const kurang = ujian.jumlah_soal - soalList.length;
+        // Tambahkan soal kosong jika kurang dari jumlah ujian
+        if (jumlahSoal > soalList.length) {
+          const kurang = jumlahSoal - soalList.length;
           for (let i = 0; i < kurang; i++) {
             soalList.push({
               id: null,
+              localId: uuidv4(),
               pertanyaan: '',
               mediaType: 'none',
               jawaban: { A: '', B: '', C: '', D: '' },
               jawabanBenar: 'A',
             });
           }
-        } else if (ujian && ujian.jumlah_soal < soalList.length) {
-          soalList.splice(ujian.jumlah_soal);
+        } else if (jumlahSoal < soalList.length) {
+          soalList.splice(jumlahSoal);
         }
 
         setSoals(soalList);
 
+        // Set preview media soal berdasarkan soal yg ada
+        const newPreviews: Record<string, string | null> = {};
         arr.forEach(item => {
-          setPreviews(prev => ({
-            ...prev,
-            [item.id]: item.media_path ? `http://localhost:8000/storage/${item.media_path}` : null,
-          }));
+          newPreviews[item.id] = item.media_path ? `http://127.0.0.1:8000/storage/${item.media_path}` : null;
         });
+        setPreviews(newPreviews);
       } catch (error) {
         console.error(error);
         alert('Gagal memuat soal.');
@@ -131,41 +139,45 @@ export default function EditSoalPage() {
     };
 
     (async () => {
-      await fetchUjian();
-      await fetchSoal();
+      const ujianData = await fetchUjian();
+      if (ujianData) {
+        await fetchSoal(ujianData.jumlah_soal);
+      }
     })();
-  }, [ujianId, router, ujian?.jumlah_soal]);
 
+  }, [ujianId, router]);
+
+  // Update field soal by localId
   const onChangeSoal = (
-    id: number | null,
-    field: keyof Omit<SoalData, 'id' | 'jawaban'> | 'jawabanBenar',
+    localId: string,
+    field: keyof Omit<SoalData, 'id' | 'jawaban' | 'localId'> | 'jawabanBenar',
     val: any
   ) => {
     setSoals(prev =>
       prev.map(s =>
-        s.id === id ? { ...s, [field]: val } : s
+        s.localId === localId ? { ...s, [field]: val } : s
       )
     );
   };
 
-  const onChangeJawaban = (id: number | null, k: keyof JawabanOptions, val: string) => {
+  const onChangeJawaban = (localId: string, k: keyof JawabanOptions, val: string) => {
     setSoals(prev =>
       prev.map(s =>
-        s.id === id ? { ...s, jawaban: { ...s.jawaban, [k]: val } } : s
+        s.localId === localId ? { ...s, jawaban: { ...s.jawaban, [k]: val } } : s
       )
     );
   };
 
-  const onMediaChange = (id: number | null, file: File | null) => {
+  const onMediaChange = (localId: string, id: number | null, file: File | null) => {
     if (id === null) {
       alert('Media hanya bisa di-upload untuk soal yang sudah tersimpan.');
       return;
     }
 
-    setMediaFiles(prev => ({ ...prev, [id]: file }));
+    setMediaFiles(prev => ({ ...prev, [localId]: file }));
     setPreviews(prev => ({
       ...prev,
-      [id]: file ? URL.createObjectURL(file) : null,
+      [localId]: file ? URL.createObjectURL(file) : null,
     }));
 
     if (file) {
@@ -174,9 +186,9 @@ export default function EditSoalPage() {
         : file.type.startsWith('video/')
           ? 'video'
           : 'none';
-      onChangeSoal(id, 'mediaType', type);
+      onChangeSoal(localId, 'mediaType', type);
     } else {
-      onChangeSoal(id, 'mediaType', 'none');
+      onChangeSoal(localId, 'mediaType', 'none');
     }
   };
 
@@ -184,20 +196,18 @@ export default function EditSoalPage() {
     setSaving(true);
     try {
       for (const s of soals) {
-        // Skip soal kosong tanpa pertanyaan dan jawaban
         if (!s.pertanyaan.trim()) continue;
 
         const form = new FormData();
         form.append('pertanyaan', s.pertanyaan);
         form.append('media_type', s.mediaType);
 
-        // For update
         if (s.id) {
           form.append('_method', 'PUT');
         }
 
-        if (s.id && mediaFiles[s.id]) {
-          form.append('media_file', mediaFiles[s.id]!);
+        if (s.id && mediaFiles[s.localId]) {
+          form.append('media_file', mediaFiles[s.localId]!);
         }
 
         (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).forEach((k, i) => {
@@ -206,23 +216,18 @@ export default function EditSoalPage() {
         });
 
         let url = '';
-        let method = '';
+        let method = 'POST';
 
         if (s.id) {
-          url = `http://localhost:8000/api/soals/${s.id}`;
-          method = 'POST'; // POST + _method=PUT override
+          url = `http://127.0.0.1:8000/api/soals/${s.id}`;
         } else {
-          url = `http://localhost:8000/api/soals`;
-          method = 'POST';
+          url = `http://127.0.0.1:8000/api/soals`;
           form.append('ujian_id', ujianId ?? '');
         }
 
         const res = await fetch(url, {
           method,
           body: form,
-          headers: {
-            // Note: Don't set Content-Type, browser will set with boundary
-          },
         });
 
         if (!res.ok) {
@@ -252,31 +257,31 @@ export default function EditSoalPage() {
       <div className="max-w-4xl mx-auto bg-white p-6 mt-6 space-y-6">
         <h1 className="text-2xl font-bold mb-4">Edit Soal Ujian</h1>
         {soals.map((s, idx) => (
-          <div key={s.id ?? `new-${idx}`} className="border p-4 rounded bg-gray-50 space-y-4">
+          <div key={s.localId} className="border p-4 rounded bg-gray-50 space-y-4">
             <h2 className="font-medium">Soal : {idx + 1}</h2>
             <textarea
               className="w-full border rounded p-2"
               value={s.pertanyaan}
-              onChange={e => onChangeSoal(s.id, 'pertanyaan', e.target.value)}
+              onChange={e => onChangeSoal(s.localId, 'pertanyaan', e.target.value)}
               required
             />
             <div>
               <input
                 type="file"
                 accept="image/*,video/*"
-                disabled={s.id === null} // Disable upload for new soal
-                onChange={e => onMediaChange(s.id, e.target.files?.[0] ?? null)}
+                disabled={s.id === null}
+                onChange={e => onMediaChange(s.localId, s.id, e.target.files?.[0] ?? null)}
               />
-              {previews[s.id ?? `new-${idx}`] && (
+              {previews[s.localId] && (
                 s.mediaType === 'image' ? (
                   <img
-                    src={previews[s.id ?? `new-${idx}`]!}
+                    src={previews[s.localId]!}
                     className="max-w-full max-h-48 mt-2 rounded"
                     alt="Preview media soal"
                   />
                 ) : s.mediaType === 'video' ? (
                   <video
-                    src={previews[s.id ?? `new-${idx}`]!}
+                    src={previews[s.localId]!}
                     controls
                     className="max-w-full max-h-48 mt-2 rounded"
                   />
@@ -291,7 +296,7 @@ export default function EditSoalPage() {
                     type="text"
                     className="w-full border rounded px-2 py-1"
                     value={s.jawaban[k]}
-                    onChange={e => onChangeJawaban(s.id, k, e.target.value)}
+                    onChange={e => onChangeJawaban(s.localId, k, e.target.value)}
                     required
                   />
                 </div>
@@ -301,7 +306,7 @@ export default function EditSoalPage() {
               <label className="mr-2">Jawaban Benar:</label>
               <select
                 value={s.jawabanBenar}
-                onChange={e => onChangeSoal(s.id, 'jawabanBenar', e.target.value as keyof JawabanOptions)}
+                onChange={e => onChangeSoal(s.localId, 'jawabanBenar', e.target.value as keyof JawabanOptions)}
                 className="border rounded px-2 py-1"
               >
                 {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(k => (

@@ -16,7 +16,6 @@ export default function AdminLayout({
   searchTerm,
   setSearchTerm,
 }: AdminLayoutProps) {
-  // ✅ Sidebar default tertutup (collapsed)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -38,7 +37,10 @@ export default function AdminLayout({
 
   if (checkingAuth) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 text-gray-600">
+      <div
+        className="flex items-center justify-center min-h-screen"
+        style={{ backgroundColor: '#D1D1D1', color: '#1F2937' }} // text-gray-800
+      >
         Memeriksa akses...
       </div>
     );
@@ -47,7 +49,10 @@ export default function AdminLayout({
   if (!isAuthorized) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div
+      className="flex min-h-screen"
+      style={{ backgroundColor: '#E5E5E5', color: '#1F2932' }} 
+    >
       {/* Sidebar */}
       <AdminSidebar
         isCollapsed={isSidebarCollapsed}
