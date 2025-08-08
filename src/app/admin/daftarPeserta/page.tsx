@@ -106,7 +106,7 @@ export default function DaftarPesertaPage() {
     <button
       onClick={handleToggleSort}
       aria-label="Toggle sort"
-      className="text-xs text-gray-200 hover:text-white focus:outline-none"
+      className="text-xs text-gray-200 hover:text-white focus:outline-none cursor-pointer"
       type="button"
     >
       {sortDirection === 'asc' ? '▲' : '▼'}
@@ -119,7 +119,7 @@ export default function DaftarPesertaPage() {
         <h1 className="text-2xl font-semibold text-gray-800">Daftar Peserta</h1>
         <button
           onClick={() => router.push('/admin/daftarPeserta/tambahPeserta')}
-          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
+          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium cursor-pointer"
           type="button"
         >
           <svg

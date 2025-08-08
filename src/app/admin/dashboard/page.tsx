@@ -122,13 +122,13 @@ export default function AdminDashboard() {
               dateFormat="MM/yyyy"
               showMonthYearPicker
               placeholderText="Pilih rentang bulan"
-              className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44"
+              className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44 cursor-pointer"
               onChangeRaw={(event) => event?.preventDefault?.()}
               filterDate={isSelectableDate}
             />
             {(monthRange[0] || monthRange[1]) && (
               <button
-                className="ml-2 px-3 py-1 text-sm bg-gray-300 rounded hover:bg-gray-400"
+                className="ml-2 px-3 py-1 text-sm bg-gray-300 rounded hover:bg-gray-400 cursor-pointer"
                 onClick={cancelMonthFilter}
                 type="button"
               >
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="w-36 rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm
-                focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out"
+                focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out cursor-pointer"
             >
               <option value="">Semua Status</option>
               <option value="Selesai">Selesai</option>
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
 
       <div className="mt-6 flex justify-end">
         <button
-          className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
+          className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 cursor-pointer"
           onClick={handleExportExcel}
         >
           Unduh Excel

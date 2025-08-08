@@ -168,13 +168,13 @@ export default function BuatSoalPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded"
+              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded cursor-pointer"
             >
               Simpan
             </button>

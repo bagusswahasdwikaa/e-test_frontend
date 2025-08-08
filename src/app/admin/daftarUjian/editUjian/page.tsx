@@ -186,7 +186,7 @@ export default function EditUjianPage() {
           <select
             value={ujian.status}
             onChange={e => handleChange('status', e.target.value as StatusType)}
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-2 cursor-pointer"
             required
           >
             <option value="Aktif">Aktif</option>
@@ -197,7 +197,7 @@ export default function EditUjianPage() {
         <div className="flex justify-between mt-6">
           <button
             onClick={() => router.push('/admin/daftarUjian')}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 cursor-pointer"
             disabled={saving}
           >
             Kembali
@@ -206,7 +206,7 @@ export default function EditUjianPage() {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
           >
             {saving ? 'Menyimpan...' : 'Selanjutnya'}
           </button>

@@ -254,9 +254,9 @@ export default function SoalBulkPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
             >
-              Simpan Semua Soal
+              Simpan Perubahan
             </button>
           </div>
         </form>
@@ -272,13 +272,13 @@ export default function SoalBulkPage() {
                 onClick={() =>
                   router.push(`/admin/daftarUjian/lihatSoal/?ujian_id=${ujianId}`)
                 }
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 cursor-pointer"
               >
                 Lihat Soal
               </button>
               <button
                 onClick={() => router.push('/admin/daftarUjian')}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 cursor-pointer"
               >
                 Kembali
               </button>

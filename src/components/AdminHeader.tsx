@@ -1,26 +1,37 @@
 'use client';
 
-import React, { Dispatch, SetStateAction } from 'react';
+import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { FaUserCircle, FaSearch } from 'react-icons/fa';
 
 interface AdminHeaderProps {
   searchTerm: string;
   setSearchTerm: Dispatch<SetStateAction<string>>;
-  userName?: string;
   isSidebarCollapsed: boolean;
 }
 
 export default function AdminHeader({
   searchTerm,
   setSearchTerm,
-  userName = 'Admin',
   isSidebarCollapsed,
 }: AdminHeaderProps) {
+  const [userName, setUserName] = useState('Admin');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const firstName = localStorage.getItem('first_name');
+      const lastName = localStorage.getItem('last_name');
+
+      if (firstName || lastName) {
+        setUserName(`${firstName ?? ''} ${lastName ?? ''}`.trim());
+      }
+    }
+  }, []);
+
   return (
     <header
       className={`bg-blue-900 text-white flex items-center justify-between px-6 py-3 sticky top-0 z-30 transition-all duration-300`}
       style={{
-        left: isSidebarCollapsed ? 80 : 256, // 20 * 4 = 80px, 64 * 4 = 256px (tailwind spacing scale)
+        left: isSidebarCollapsed ? 80 : 256,
         right: 0,
         position: 'sticky',
       }}
@@ -41,7 +52,9 @@ export default function AdminHeader({
 
       {/* Profile section */}
       <div className="flex items-center gap-2 cursor-pointer select-none">
-        <span className="hidden sm:inline text-sm font-medium">{userName}</span>
+        <span className="hidden sm:inline text-sm font-medium">
+          {userName}
+        </span>
         <FaUserCircle size={28} />
       </div>
     </header>

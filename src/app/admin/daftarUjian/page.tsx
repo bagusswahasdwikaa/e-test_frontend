@@ -129,7 +129,7 @@ export default function DaftarUjianPage() {
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-semibold">Daftar Ujian</h1>
         <button
-          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200"
+          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 cursor-pointer"
           onClick={() => router.push('/admin/daftarUjian/buatSoal')}
         >
           <svg
@@ -208,7 +208,7 @@ export default function DaftarUjianPage() {
                     </td>
                     <td className="px-4 py-2 space-x-1">
                       <button
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs cursor-pointer"
                         onClick={() =>
                           router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${ujian.id}`)
                         }
@@ -216,7 +216,7 @@ export default function DaftarUjianPage() {
                         Lihat
                       </button>
                       <button
-                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs"
+                        className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs cursor-pointer"
                         onClick={() =>
                           router.push(`/admin/daftarUjian/editUjian?ujian_id=${ujian.id}`)
                         }
@@ -224,7 +224,7 @@ export default function DaftarUjianPage() {
                         Edit
                       </button>
                       <button
-                        className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs"
+                        className="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded text-xs cursor-pointer"
                         onClick={() => handleDelete(ujian.id)}
                       >
                         Hapus

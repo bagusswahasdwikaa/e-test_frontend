@@ -53,6 +53,8 @@ export default function LoginPage() {
       // Simpan token dan role
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.user.role); // <== PENTING
+      localStorage.setItem('first_name', data.user.first_name || '');
+      localStorage.setItem('last_name', data.user.last_name || '');
 
       // Redirect berdasarkan role
       if (data.user.role === 'admin') {
@@ -114,7 +116,7 @@ export default function LoginPage() {
             />
 
             <div className="text-right text-sm text-white -mt-2">
-              <Link href="/authentication/forgot-password" className="hover:text-gray-300">
+              <Link href="/authentication/forgotPassword" className="hover:text-gray-300">
                 Lupa Kata Sandi?
               </Link>
             </div>

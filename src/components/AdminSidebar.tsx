@@ -34,10 +34,10 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: SidebarPro
         }`}
       >
         <div className="flex items-center justify-between px-4 py-6">
-          {!isCollapsed && <span className="text-xl font-bold select-none">Admin</span>}
+          {!isCollapsed && <span className="text-xl font-bold select-none">Menu</span>}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-white p-2 rounded hover:bg-gray-800 transition"
+            className="text-white p-2 rounded hover:bg-gray-800 transition cursor-pointer"
             aria-label="Toggle Sidebar"
           >
             <FiMenu />
@@ -63,7 +63,7 @@ export default function AdminSidebar({ isCollapsed, setIsCollapsed }: SidebarPro
         </nav>
 
         <button
-          className="mt-auto mx-2 mb-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-semibold transition flex items-center justify-center gap-2"
+          className="mt-auto mx-2 mb-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-semibold transition flex items-center justify-center gap-2 cursor-pointer" // ← tambahkan cursor-pointer
           onClick={handleLogout}
         >
           <FiLogOut />

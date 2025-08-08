@@ -171,7 +171,7 @@ export default function TambahPesertaPage() {
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border rounded px-3 py-2 text-sm cursor-pointer"
               required
             >
               <option value="aktif">Aktif</option>
@@ -183,7 +183,7 @@ export default function TambahPesertaPage() {
             <button
               type="button"
               onClick={() => router.push('/admin/daftarPeserta')}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer"
               disabled={loading}
             >
               Batal
@@ -192,7 +192,7 @@ export default function TambahPesertaPage() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
             >
               {loading ? 'Menyimpan...' : 'Tambahkan'}
             </button>

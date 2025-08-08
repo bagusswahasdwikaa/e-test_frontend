@@ -307,7 +307,7 @@ export default function EditSoalPage() {
               <select
                 value={s.jawabanBenar}
                 onChange={e => onChangeSoal(s.localId, 'jawabanBenar', e.target.value as keyof JawabanOptions)}
-                className="border rounded px-2 py-1"
+                className="border rounded px-2 py-1 cursor-pointer"
               >
                 {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(k => (
                   <option key={k} value={k}>{k}</option>
@@ -319,7 +319,7 @@ export default function EditSoalPage() {
         <div className="flex justify-between mt-4">
           <button
             onClick={() => router.push(`/admin/daftarUjian/editUjian?ujian_id=${ujianId}`)}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 cursor-pointer"
             disabled={saving}
           >
             Kembali
@@ -327,7 +327,7 @@ export default function EditSoalPage() {
           <button
             onClick={submitAll}
             disabled={saving}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
           >
             {saving ? 'Menyimpan...' : 'Simpan Semua'}
           </button>

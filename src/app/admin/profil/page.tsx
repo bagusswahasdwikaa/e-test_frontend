@@ -7,7 +7,7 @@ type UserProfile = {
   nama: string;
   email: string;
   fotoUrl?: string;
-  bio: string; // jadikan wajib, bukan optional
+  bio: string;
 };
 
 export default function AdminProfilPage() {
@@ -15,26 +15,33 @@ export default function AdminProfilPage() {
     nama: '',
     email: '',
     fotoUrl: '',
-    bio: '', // harus ada nilai default string
+    bio: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setLoading(true);
       try {
-        await new Promise((r) => setTimeout(r, 800));
-        const data: UserProfile = {
-          nama: 'Admin User',
-          email: 'admin@example.com',
-          fotoUrl: 'https://i.pravatar.cc/150?img=12',
-          bio: 'Administrator sistem dengan pengalaman lebih dari 5 tahun.',
-        };
-        setProfile(data);
-      } catch {
-        setError('Gagal memuat data profil.');
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:8000/api/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Gagal mengambil data profil.');
+        const data = await res.json();
+        const fullName = `${data.first_name ?? ''} ${data.last_name ?? ''}`.trim();
+        setProfile({
+          nama: fullName,
+          email: data.email,
+          fotoUrl: data.photo_url || '',
+          bio: data.bio || '',
+        });
+      } catch (err: any) {
+        setError(err.message || 'Terjadi kesalahan saat memuat profil.');
       } finally {
         setLoading(false);
       }
@@ -66,28 +73,32 @@ export default function AdminProfilPage() {
     setError(null);
     setSuccess(null);
     try {
-      await new Promise((r) => setTimeout(r, 1500));
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:8000/api/profile/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: profile.nama,
+          email: profile.email,
+          bio: profile.bio,
+          photo_url: profile.fotoUrl,
+        }),
+      });
+      if (!res.ok) throw new Error('Gagal menyimpan perubahan profil.');
       setSuccess('Profil berhasil diperbarui!');
-    } catch {
-      setError('Gagal menyimpan profil.');
+      setIsEditing(false);
+    } catch (err: any) {
+      setError(err.message || 'Gagal menyimpan profil.');
     } finally {
       setSaving(false);
     }
   };
 
   const onReset = () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    setTimeout(() => {
-      setProfile({
-        nama: 'Admin User',
-        email: 'admin@example.com',
-        fotoUrl: 'https://i.pravatar.cc/150?img=12',
-        bio: 'Administrator sistem dengan pengalaman lebih dari 5 tahun.',
-      });
-      setLoading(false);
-    }, 500);
+    window.location.reload();
   };
 
   if (loading)
@@ -99,169 +110,138 @@ export default function AdminProfilPage() {
 
   return (
     <AdminLayout>
-      <div className="max-w-3xl mx-auto p-8 bg-white rounded-xl shadow-lg transition-shadow hover:shadow-2xl duration-300">
-        <h1 className="text-4xl font-extrabold mb-8 text-gray-900 tracking-tight">
-          Profil Saya
-        </h1>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-md font-medium">
-            {error}
+      <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg">
+        <div className="flex flex-col items-center gap-6">
+          <div
+            className="w-36 h-36 rounded-full overflow-hidden border-4 shadow-md"
+            style={{ borderColor: '#2F80ED' /* Warna dari palet Anda */ }}
+          >
+            {profile.fotoUrl ? (
+              <img
+                src={profile.fotoUrl}
+                alt="Foto Profil"
+                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+              />
+            ) : (
+              <div className="flex items-center justify-center w-full h-full bg-gray-200 text-gray-500 text-6xl font-bold">
+                ?
+              </div>
+            )}
           </div>
-        )}
-        {success && (
-          <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-md font-medium">
-            {success}
-          </div>
-        )}
 
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-10">
-          {/* Foto Profil */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative w-36 h-36 rounded-full overflow-hidden shadow-lg border-4 border-blue-600">
-              {profile.fotoUrl ? (
-                <img
-                  src={profile.fotoUrl}
-                  alt="Foto Profil"
-                  className="w-full h-full object-cover"
-                  draggable={false}
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-6xl font-bold">
-                  ?
+          {!isEditing ? (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900">{profile.nama || 'Nama Belum Tersedia'}</h1>
+              <p className="text-gray-700 text-lg">{profile.email || 'Email Belum Tersedia'}</p>
+              <p className="text-gray-500 text-center">{profile.bio || 'Bio belum ditambahkan.'}</p>
+              <button
+                onClick={() => {
+                  setIsEditing(true);
+                  setError(null);
+                  setSuccess(null);
+                }}
+                className="mt-5 px-6 py-2 rounded transition-shadow shadow bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 cursor-pointer"
+              >
+                Edit Profil
+              </button>
+            </>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!saving) onSave();
+              }}
+              className="w-full space-y-6"
+            >
+              {(error || success) && (
+                <div
+                  className={`p-4 rounded-lg ${
+                    error ? 'bg-red-200 text-red-700' : 'bg-green-200 text-green-700'
+                  }`}
+                >
+                  {error || success}
                 </div>
               )}
-            </div>
-            <label
-              htmlFor="uploadFoto"
-              className="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-800"
-              title="Upload foto profil"
-            >
-              Ubah Foto Profil
-            </label>
-            <input
-              type="file"
-              id="uploadFoto"
-              accept="image/*"
-              onChange={onFotoChange}
-              className="hidden"
-            />
-            <p className="text-xs text-gray-500 text-center max-w-xs">
-              Format: JPG, PNG. Maks 2MB.
-            </p>
-          </div>
 
-          {/* Form Profil */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!saving) onSave();
-            }}
-            className="flex-1 w-full max-w-md space-y-6"
-          >
-            <div>
-              <label
-                htmlFor="nama"
-                className="block mb-1 font-semibold text-gray-700"
-              >
-                Nama Lengkap
-              </label>
-              <input
-                id="nama"
-                type="text"
-                required
-                value={profile.nama}
-                onChange={(e) => onChange('nama', e.target.value)}
-                className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-                placeholder="Masukkan nama lengkap"
-                autoComplete="name"
-              />
-            </div>
+              <div>
+                <label className="block font-medium mb-2">Nama Lengkap</label>
+                <input
+                  type="text"
+                  required
+                  value={profile.nama}
+                  onChange={(e) => onChange('nama', e.target.value)}
+                  className="w-full px-4 py-2 border rounded focus:ring focus:ring-[#56CCF2]"
+                  placeholder="Masukkan Nama Lengkap"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="email"
-                className="block mb-1 font-semibold text-gray-700"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={profile.email}
-                onChange={(e) => onChange('email', e.target.value)}
-                className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-                placeholder="Masukkan email"
-                autoComplete="email"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Email ini digunakan untuk login dan komunikasi.
-              </p>
-            </div>
+              <div>
+                <label className="block font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={profile.email}
+                  onChange={(e) => onChange('email', e.target.value)}
+                  className="w-full px-4 py-2 border rounded focus:ring focus:ring-[#56CCF2]"
+                  placeholder="Masukkan Email"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="bio"
-                className="block mb-1 font-semibold text-gray-700"
-              >
-                Bio Singkat
-              </label>
-              <textarea
-                id="bio"
-                rows={4}
-                maxLength={250}
-                value={profile.bio}
-                onChange={(e) => onChange('bio', e.target.value)}
-                className="w-full px-4 py-2 rounded-md border border-gray-300 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-                placeholder="Ceritakan tentang diri Anda"
-              />
-              <p className="mt-1 text-xs text-gray-400 text-right">
-                {profile.bio.length}/250
-              </p>
-            </div>
+              <div>
+                <label className="block font-medium mb-2">Bio</label>
+                <textarea
+                  rows={3}
+                  value={profile.bio}
+                  maxLength={250}
+                  onChange={(e) => onChange('bio', e.target.value)}
+                  className="w-full px-4 py-2 border rounded resize-none focus:ring focus:ring-[#56CCF2]"
+                  placeholder="Tambahkan bio singkat tentang dirimu"
+                />
+                <p className="text-gray-500 text-right text-sm">{profile.bio.length}/250</p>
+              </div>
 
-            {/* Tombol aksi */}
-            <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={onReset}
-                disabled={saving}
-                className="px-5 py-2 rounded-md border border-gray-400 text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
-              >
-                Reset
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {saving && (
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
+              <div className="flex flex-col items-start">
+                <label
+                  htmlFor="uploadFoto"
+                  className="font-medium cursor-pointer text-[#2F80ED] hover:underline"
+                >
+                  Unggah Foto Baru
+                </label>
+                <input
+                  type="file"
+                  id="uploadFoto"
+                  accept="image/*"
+                  onChange={onFotoChange}
+                  className="hidden"
+                />
+                {profile.fotoUrl && (
+                  <img
+                    src={profile.fotoUrl}
+                    alt="Preview Foto Profil"
+                    className="w-20 h-20 mt-2 rounded-full border shadow-md object-cover"
+                  />
                 )}
-                {saving ? 'Menyimpan...' : 'Simpan'}
-              </button>
-            </div>
-          </form>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t border-gray-300">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => onReset()}
+                  className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-60 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
+                >
+                  {saving ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </AdminLayout>
