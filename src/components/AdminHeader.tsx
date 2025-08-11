@@ -1,7 +1,14 @@
 'use client';
 
 import React, { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { FaUserCircle, FaSearch } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
+import {
+  FaUserCircle,
+  FaSearch,
+  FaChevronDown,
+  FaChevronUp,
+  FaSignOutAlt,
+} from 'react-icons/fa';
 
 interface AdminHeaderProps {
   searchTerm: string;
@@ -15,6 +22,10 @@ export default function AdminHeader({
   isSidebarCollapsed,
 }: AdminHeaderProps) {
   const [userName, setUserName] = useState('Admin');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -24,8 +35,21 @@ export default function AdminHeader({
       if (firstName || lastName) {
         setUserName(`${firstName ?? ''} ${lastName ?? ''}`.trim());
       }
+
+      const profilePic = localStorage.getItem('profile_picture');
+      setProfilePicture(profilePic);
     }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push('/authentication/login');
+  };
+
+  const handleProfile = () => {
+    setIsDropdownOpen(false);
+    router.push('/admin/profil');
+  };
 
   return (
     <header
@@ -50,12 +74,59 @@ export default function AdminHeader({
         />
       </div>
 
-      {/* Profile section */}
-      <div className="flex items-center gap-2 cursor-pointer select-none">
-        <span className="hidden sm:inline text-sm font-medium">
-          {userName}
-        </span>
-        <FaUserCircle size={28} />
+      {/* Profile section with dropdown */}
+      <div className="relative flex items-center gap-2 cursor-pointer select-none">
+        <span className="hidden sm:inline text-sm font-medium">{userName}</span>
+        <div
+          className="flex items-center gap-2 cursor-pointer select-none"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        >
+          {profilePicture ? (
+            <img
+              src={profilePicture}
+              alt="Profile"
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <FaUserCircle size={28} />
+          )}
+
+          {/* Toggle chevron icon */}
+          {isDropdownOpen ? (
+            <FaChevronDown size={14} className="text-gray-300" />
+          ) : (
+            <FaChevronUp size={14} className="text-gray-300" />
+          )}
+        </div>
+
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <div
+            className="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded-lg shadow-lg z-40"
+            style={{ top: '100%' }}
+          >
+            <ul className="p-2">
+              <li
+                className="px-4 py-2 text-sm hover:bg-blue-100 cursor-pointer"
+                onClick={handleProfile}
+              >
+                <div className="flex items-center gap-2">
+                  <FaUserCircle />
+                  Profil
+                </div>
+              </li>
+              <li
+                className="px-4 py-2 text-sm hover:bg-blue-100 cursor-pointer"
+                onClick={handleLogout}
+              >
+                <div className="flex items-center gap-2">
+                  <FaSignOutAlt />
+                  Log out
+                </div>
+              </li>
+            </ul>
+          </div>
+        )}
       </div>
     </header>
   );
