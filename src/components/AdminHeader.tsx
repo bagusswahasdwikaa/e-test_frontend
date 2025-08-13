@@ -31,13 +31,18 @@ export default function AdminHeader({
     if (typeof window !== 'undefined') {
       const firstName = localStorage.getItem('first_name');
       const lastName = localStorage.getItem('last_name');
+      const profilePic = localStorage.getItem('profile_picture');
 
       if (firstName || lastName) {
         setUserName(`${firstName ?? ''} ${lastName ?? ''}`.trim());
       }
 
-      const profilePic = localStorage.getItem('profile_picture');
-      setProfilePicture(profilePic);
+      if (profilePic) {
+        const absoluteUrl = profilePic.startsWith('http')
+          ? profilePic
+          : `http://localhost:8000${profilePic}`;
+        setProfilePicture(absoluteUrl);
+      }
     }
   }, []);
 
@@ -85,13 +90,12 @@ export default function AdminHeader({
             <img
               src={profilePicture}
               alt="Profile"
-              className="w-8 h-8 rounded-full object-cover"
+              className="w-8 h-8 rounded-full object-cover border"
             />
           ) : (
             <FaUserCircle size={28} />
           )}
 
-          {/* Toggle chevron icon */}
           {isDropdownOpen ? (
             <FaChevronDown size={14} className="text-gray-300" />
           ) : (
@@ -99,7 +103,6 @@ export default function AdminHeader({
           )}
         </div>
 
-        {/* Dropdown Menu */}
         {isDropdownOpen && (
           <div
             className="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded-lg shadow-lg z-40"

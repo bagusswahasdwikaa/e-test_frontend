@@ -5,6 +5,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { ExamResult } from '@/types/index';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 export default function AdminDashboard() {
   const [examData, setExamData] = useState<ExamResult[]>([]);
@@ -228,7 +229,8 @@ export default function AdminDashboard() {
           className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 cursor-pointer"
           onClick={handleExportExcel}
         >
-          Unduh Excel
+          <ArrowDownTrayIcon className="h-5 w-5 text-white stroke-2" />
+          <span>Unduh Excel</span>
         </button>
       </div>
     </AdminLayout>

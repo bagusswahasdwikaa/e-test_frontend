@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import AdminLayout from '@/components/AdminLayout';
+import UserLayout from '@/components/UserLayout';
 
 type UserProfile = {
   firstName: string;
@@ -12,7 +12,7 @@ type UserProfile = {
   bio: string;
 };
 
-export default function AdminProfilPage() {
+export default function UserProfilPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>({
     firstName: '',
@@ -33,7 +33,7 @@ export default function AdminProfilPage() {
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
 
-      if (!token || role !== 'admin') {
+      if (!token || role !== 'user') {
         router.replace('/authentication/login');
         return;
       }
@@ -68,7 +68,7 @@ export default function AdminProfilPage() {
           bio: data.bio || '',
         });
 
-        // Simpan ke localStorage untuk konsistensi dengan AdminHeader
+        // Simpan ke localStorage untuk konsistensi dengan UserHeader
         localStorage.setItem('first_name', firstName);
         localStorage.setItem('last_name', lastName);
         if (data.photo_url) {
@@ -162,14 +162,14 @@ export default function AdminProfilPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <UserLayout>
         <div className="p-6 text-center text-gray-600">Memuat profil...</div>
-      </AdminLayout>
+      </UserLayout>
     );
   }
 
   return (
-    <AdminLayout>
+    <UserLayout>
       <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg">
         <div className="flex flex-col items-center gap-6">
           {/* Foto Profil */}
@@ -303,6 +303,6 @@ export default function AdminProfilPage() {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </UserLayout>
   );
 }

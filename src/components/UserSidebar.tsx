@@ -1,8 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { FiHome, FiFileText, FiBarChart2, FiLogOut, FiMenu } from 'react-icons/fi';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  FiHome,
+  FiFileText,
+  FiBarChart2,
+  FiLogOut,
+  FiMenu,
+  FiUser,
+} from 'react-icons/fi';
 import React, { Dispatch, SetStateAction } from 'react';
 
 interface UserSidebarProps {
@@ -10,14 +17,25 @@ interface UserSidebarProps {
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
 }
 
-export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebarProps) {
+export default function UserSidebar({
+  isCollapsed,
+  setIsCollapsed,
+}: UserSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const menuItems = [
     { label: 'Beranda', href: '/user/dashboard', icon: <FiHome /> },
     { label: 'Soal', href: '/user/soal', icon: <FiFileText /> },
     { label: 'Hasil', href: '/user/hasil', icon: <FiBarChart2 /> },
+    { label: 'Profil', href: '/user/profil', icon: <FiUser /> },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    router.push('/authentication/login');
+  };
 
   return (
     <div className="fixed top-0 left-0 h-screen z-50">
@@ -26,19 +44,19 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
-        {/* Header & Toggle Button */}
+        {/* Header & Toggle */}
         <div className="flex items-center justify-between px-4 py-6">
           {!isCollapsed && <span className="text-xl font-bold select-none">Menu</span>}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-white p-2 rounded hover:bg-gray-800 transition"
+            className="text-white p-2 rounded hover:bg-gray-800 transition cursor-pointer"
             aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             <FiMenu />
           </button>
         </div>
 
-        {/* Menu Links */}
+        {/* Menu Items */}
         <nav className="flex flex-col gap-2 px-2 flex-1">
           {menuItems.map(({ label, href, icon }) => {
             const isActive = pathname === href;
@@ -46,9 +64,9 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition
-                  ${isActive ? 'bg-gray-700' : 'hover:bg-gray-800'}
-                `}
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition ${
+                  isActive ? 'bg-gray-700' : 'hover:bg-gray-800'
+                }`}
               >
                 <span className="text-lg">{icon}</span>
                 {!isCollapsed && <span>{label}</span>}
@@ -57,14 +75,10 @@ export default function UserSidebar({ isCollapsed, setIsCollapsed }: UserSidebar
           })}
         </nav>
 
-        {/* Logout Button */}
+        {/* Logout */}
         <button
-          className="mt-auto mx-2 mb-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-semibold transition flex items-center justify-center gap-2"
-          onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('role');
-            window.location.href = '/authentication/login'; // Redirect setelah logout
-          }}
+          onClick={handleLogout}
+          className="mt-auto mx-2 mb-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-semibold transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <FiLogOut />
           {!isCollapsed && <span>Keluar</span>}
