@@ -3,13 +3,15 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import UserLayout from '@/components/UserLayout';
+import { FiUpload } from 'react-icons/fi';
 
 type UserProfile = {
   firstName: string;
   lastName: string;
   email: string;
-  fotoUrl?: string;
+  fotoUrl: string | null;
   bio: string;
+  fotoBase64?: string | null;
 };
 
 export default function UserProfilPage() {
@@ -18,8 +20,9 @@ export default function UserProfilPage() {
     firstName: '',
     lastName: '',
     email: '',
-    fotoUrl: '',
+    fotoUrl: null,
     bio: '',
+    fotoBase64: null,
   });
 
   const [loading, setLoading] = useState(true);
@@ -27,6 +30,7 @@ export default function UserProfilPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -38,7 +42,6 @@ export default function UserProfilPage() {
         return;
       }
 
-      setLoading(true);
       try {
         const res = await fetch('http://localhost:8000/api/profile', {
           headers: {
@@ -51,30 +54,28 @@ export default function UserProfilPage() {
 
         const data = await res.json();
 
-        const fullName = data.full_name || `${data.first_name ?? ''} ${data.last_name ?? ''}`.trim();
-        const parts = fullName.split(' ');
-        const firstName = parts.shift() || '';
-        const lastName = parts.join(' ') || '';
+        const fullName = data.full_name || `${data.first_name} ${data.last_name}`.trim();
+        const [firstName, ...rest] = fullName.split(' ');
+        const lastName = rest.join(' ') || '';
         const rawPhotoUrl = data.photo_url || '';
         const absolutePhotoUrl = rawPhotoUrl.startsWith('http')
-        ? rawPhotoUrl
-        : `http://localhost:8000${rawPhotoUrl}`;
+          ? rawPhotoUrl
+          : `http://localhost:8000${rawPhotoUrl}`;
 
         setProfile({
           firstName,
           lastName,
           email: data.email,
-          fotoUrl: absolutePhotoUrl,
+          fotoUrl: rawPhotoUrl ? absolutePhotoUrl : null,
           bio: data.bio || '',
+          fotoBase64: null,
         });
 
-        // Simpan ke localStorage untuk konsistensi dengan UserHeader
         localStorage.setItem('first_name', firstName);
         localStorage.setItem('last_name', lastName);
         if (data.photo_url) {
           localStorage.setItem('profile_picture', data.photo_url);
         }
-
       } catch (err: any) {
         setError(err.message || 'Terjadi kesalahan saat memuat profil.');
       } finally {
@@ -90,19 +91,44 @@ export default function UserProfilPage() {
   };
 
   const onFotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    const file = e.target.files[0];
-    if (!file.type.startsWith('image/')) {
-      setError('File harus berupa gambar.');
-      return;
-    }
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfile((prev) => ({ ...prev, fotoUrl: reader.result as string }));
-      setError(null);
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        setProfile((prev) => ({
+          ...prev,
+          fotoUrl: result,
+          fotoBase64: result,
+        }));
+      }
     };
     reader.readAsDataURL(file);
+  };
+
+  const onDeletePhoto = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('http://localhost:8000/api/profile/photo', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!res.ok) throw new Error('Gagal menghapus foto profil.');
+
+      setProfile((prev) => ({ ...prev, fotoUrl: null, fotoBase64: null }));
+      localStorage.removeItem('profile_picture');
+      setSuccess('Foto profil berhasil dihapus.');
+    } catch (err: any) {
+      setError(err.message || 'Gagal menghapus foto.');
+    }
   };
 
   const onSave = async () => {
@@ -110,16 +136,12 @@ export default function UserProfilPage() {
     setError(null);
     setSuccess(null);
 
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const full_name = `${profile.firstName} ${profile.lastName}`.trim();
+
     try {
-      const token = localStorage.getItem('token');
-      const full_name = `${profile.firstName.trim()} ${profile.lastName.trim()}`.trim();
-
-      if (!full_name) {
-        setError('Nama lengkap harus diisi.');
-        setSaving(false);
-        return;
-      }
-
       const res = await fetch('http://localhost:8000/api/profile/update', {
         method: 'PUT',
         headers: {
@@ -131,26 +153,26 @@ export default function UserProfilPage() {
           full_name,
           email: profile.email,
           bio: profile.bio,
-          photo_url: profile.fotoUrl,
+          photo_url: profile.fotoBase64 || '',
         }),
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message || 'Gagal menyimpan perubahan profil.');
+        const errData = await res.json();
+        throw new Error(errData.message || 'Gagal memperbarui profil.');
       }
 
-      // ✅ Update localStorage
-      localStorage.setItem('first_name', profile.firstName);
-      localStorage.setItem('last_name', profile.lastName);
-      if (profile.fotoUrl) {
-        localStorage.setItem('profile_picture', profile.fotoUrl);
-      }
+      const data = await res.json();
 
-      setSuccess('Profil berhasil diperbarui!');
+      setSuccess(data.message || 'Profil berhasil diperbarui');
       setIsEditing(false);
+      setProfile((prev) => ({
+        ...prev,
+        fotoUrl: data.photo_url || prev.fotoUrl,
+        fotoBase64: null,
+      }));
     } catch (err: any) {
-      setError(err.message || 'Gagal menyimpan profil.');
+      setError(err.message || 'Terjadi kesalahan.');
     } finally {
       setSaving(false);
     }
@@ -170,37 +192,29 @@ export default function UserProfilPage() {
 
   return (
     <UserLayout>
-      <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow-lg">
+      <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow">
         <div className="flex flex-col items-center gap-6">
-          {/* Foto Profil */}
-          <div className="w-36 h-36 rounded-full overflow-hidden border-4 shadow-md" style={{ borderColor: '#2F80ED' }}>
+          <div
+            className="w-32 h-32 rounded-full overflow-hidden border-4 border-blue-500 cursor-pointer"
+            onClick={() => profile.fotoUrl && setPreviewOpen(true)}
+          >
             {profile.fotoUrl ? (
-              <img
-                src={profile.fotoUrl}
-                alt="Foto Profil"
-                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
-              />
+              <img src={profile.fotoUrl} alt="Foto Profil" className="w-full h-full object-cover" />
             ) : (
-              <div className="flex items-center justify-center w-full h-full bg-gray-200 text-gray-500 text-6xl font-bold">
-                ?
-              </div>
+              <div className="flex items-center justify-center w-full h-full bg-gray-200 text-4xl text-gray-500">?</div>
             )}
           </div>
 
           {!isEditing ? (
             <>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {`${profile.firstName} ${profile.lastName}`.trim() || 'Nama Belum Tersedia'}
+              <h1 className="text-2xl font-bold text-gray-800">
+                {profile.firstName} {profile.lastName}
               </h1>
-              <p className="text-gray-700 text-lg">{profile.email || 'Email Belum Tersedia'}</p>
-              <p className="text-gray-500 text-center">{profile.bio || 'Bio belum ditambahkan.'}</p>
+              <p className="text-gray-600">{profile.email}</p>
+              <p className="text-sm text-gray-500 text-center">{profile.bio || 'Belum ada bio.'}</p>
               <button
-                onClick={() => {
-                  setIsEditing(true);
-                  setError(null);
-                  setSuccess(null);
-                }}
-                className="mt-5 px-6 py-2 rounded transition-shadow shadow bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                onClick={() => setIsEditing(true)}
+                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer transition"
               >
                 Edit Profil
               </button>
@@ -214,87 +228,90 @@ export default function UserProfilPage() {
               className="w-full space-y-6"
             >
               {(error || success) && (
-                <div className={`p-4 rounded-lg ${error ? 'bg-red-200 text-red-700' : 'bg-green-200 text-green-700'}`}>
+                <div className={`p-3 rounded ${error ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
                   {error || success}
                 </div>
               )}
 
-              <div>
-                <label className="block font-medium mb-2">Nama Depan</label>
-                <input
-                  type="text"
-                  required
-                  value={profile.firstName}
-                  onChange={(e) => onChange('firstName', e.target.value)}
-                  className="w-full px-4 py-2 border rounded focus:ring focus:ring-[#56CCF2]"
-                  placeholder="Masukkan Nama Depan"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label>Nama Depan</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    value={profile.firstName}
+                    onChange={(e) => onChange('firstName', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label>Nama Belakang</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    value={profile.lastName}
+                    onChange={(e) => onChange('lastName', e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block font-medium mb-2">Nama Belakang</label>
-                <input
-                  type="text"
-                  required
-                  value={profile.lastName}
-                  onChange={(e) => onChange('lastName', e.target.value)}
-                  className="w-full px-4 py-2 border rounded focus:ring focus:ring-[#56CCF2]"
-                  placeholder="Masukkan Nama Belakang"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium mb-2">Email</label>
+                <label>Email</label>
                 <input
                   type="email"
-                  required
+                  className="w-full p-2 border rounded"
                   value={profile.email}
                   onChange={(e) => onChange('email', e.target.value)}
-                  className="w-full px-4 py-2 border rounded focus:ring focus:ring-[#56CCF2]"
-                  placeholder="Masukkan Email"
                 />
               </div>
 
               <div>
-                <label className="block font-medium mb-2">Bio</label>
+                <label>Bio</label>
                 <textarea
+                  className="w-full p-2 border rounded"
                   rows={3}
-                  maxLength={250}
                   value={profile.bio}
                   onChange={(e) => onChange('bio', e.target.value)}
-                  className="w-full px-4 py-2 border rounded resize-none focus:ring focus:ring-[#56CCF2]"
-                  placeholder="Tambahkan bio singkat tentang dirimu"
                 />
-                <p className="text-right text-sm text-gray-500">{profile.bio.length}/250</p>
               </div>
 
-              <div className="flex flex-col items-start">
-                <label htmlFor="uploadFoto" className="font-medium text-[#2F80ED] hover:underline cursor-pointer">
+              <div className="space-y-2">
+                <label htmlFor="photo-upload" className="flex items-center gap-2 text-blue-600 cursor-pointer">
+                  <FiUpload />
                   Unggah Foto Baru
                 </label>
-                <input type="file" id="uploadFoto" accept="image/*" onChange={onFotoChange} className="hidden" />
+                <input
+                  type="file"
+                  id="photo-upload"
+                  accept="image/*"
+                  onChange={onFotoChange}
+                  className="hidden"
+                />
                 {profile.fotoUrl && (
-                  <img
-                    src={profile.fotoUrl}
-                    alt="Preview Foto"
-                    className="w-20 h-20 mt-2 rounded-full border shadow object-cover"
-                  />
+                  <div className="flex items-center gap-4">
+                    <img src={profile.fotoUrl} className="w-16 h-16 rounded-full object-cover" />
+                    <button
+                      type="button"
+                      className="text-sm text-red-600 hover:underline cursor-pointer"
+                      onClick={onDeletePhoto}
+                    >
+                      Hapus Foto
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="flex justify-end gap-4 pt-4 border-t border-gray-300">
+              <div className="flex justify-end gap-4">
                 <button
                   type="button"
-                  disabled={saving}
                   onClick={onReset}
-                  className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 disabled:opacity-60 cursor-pointer"
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 cursor-pointer transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-60 cursor-pointer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Menyimpan...' : 'Simpan'}
                 </button>
@@ -302,6 +319,23 @@ export default function UserProfilPage() {
             </form>
           )}
         </div>
+
+        {previewOpen && profile.fotoUrl && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+            onClick={() => setPreviewOpen(false)}
+          >
+            <div className="bg-white p-4 rounded shadow-lg max-w-xl w-full relative">
+              <button
+                className="absolute top-2 right-2 text-gray-700 text-xl"
+                onClick={() => setPreviewOpen(false)}
+              >
+                &times;
+              </button>
+              <img src={profile.fotoUrl} className="w-full h-auto rounded" alt="Preview Besar" />
+            </div>
+          </div>
+        )}
       </div>
     </UserLayout>
   );

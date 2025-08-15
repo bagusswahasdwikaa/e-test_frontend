@@ -24,6 +24,7 @@ export default function UserHeader({
   const [userName, setUserName] = useState('User');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -57,14 +58,14 @@ export default function UserHeader({
 
   return (
     <header
-      className="bg-blue-900 text-white flex items-center justify-between px-6 py-3 sticky top-0 z-30 transition-all duration-300"
+      className={`bg-blue-900 text-white flex items-center justify-between px-6 py-3 sticky top-0 z-30 transition-all duration-300`}
       style={{
         left: isSidebarCollapsed ? 80 : 256,
         right: 0,
         position: 'sticky',
       }}
     >
-      <div className="text-lg font-semibold select-none">User Dashboard</div>
+      <div className="text-lg font-semibold select-none">E -Test</div>
 
       {/* Search input */}
       <div className="relative w-1/3 max-w-md">

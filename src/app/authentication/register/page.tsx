@@ -158,7 +158,7 @@ export default function RegisterPage() {
               />
               <button
                 type="submit"
-                className="w-full bg-[#02030E] text-white font-semibold py-2 rounded-xl hover:opacity-90 transition"
+                className="w-full bg-[#02030E] text-white font-semibold py-2 rounded-xl hover:opacity-90 transition cursor-pointer"
               >
                 Daftar
               </button>

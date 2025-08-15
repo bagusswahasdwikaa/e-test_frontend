@@ -27,22 +27,39 @@ export default function AdminHeader({
 
   const router = useRouter();
 
+  // Ambil info profil dari localStorage
+  const loadUserInfo = () => {
+    const firstName = localStorage.getItem('first_name');
+    const lastName = localStorage.getItem('last_name');
+    const profilePic = localStorage.getItem('profile_picture');
+
+    const name = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+    setUserName(name || 'Admin');
+
+    if (profilePic) {
+      const absoluteUrl = profilePic.startsWith('http')
+        ? profilePic
+        : `http://localhost:8000${profilePic}`;
+      setProfilePicture(absoluteUrl);
+    } else {
+      setProfilePicture(null);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const firstName = localStorage.getItem('first_name');
-      const lastName = localStorage.getItem('last_name');
-      const profilePic = localStorage.getItem('profile_picture');
+      loadUserInfo();
 
-      if (firstName || lastName) {
-        setUserName(`${firstName ?? ''} ${lastName ?? ''}`.trim());
-      }
+      // Optional: pantau storage jika diubah dari tab lain
+      const handleStorageChange = () => {
+        loadUserInfo();
+      };
 
-      if (profilePic) {
-        const absoluteUrl = profilePic.startsWith('http')
-          ? profilePic
-          : `http://localhost:8000${profilePic}`;
-        setProfilePicture(absoluteUrl);
-      }
+      window.addEventListener('storage', handleStorageChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
     }
   }, []);
 

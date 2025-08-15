@@ -16,12 +16,26 @@ export default function AdminLayout({
   searchTerm,
   setSearchTerm,
 }: AdminLayoutProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
+  // ✅ Ambil status sidebar dari localStorage saat pertama kali load
+  useEffect(() => {
+    const storedSidebarState = localStorage.getItem('sidebar-collapsed');
+    if (storedSidebarState !== null) {
+      setIsSidebarCollapsed(storedSidebarState === 'true');
+    }
+  }, []);
+
+  // ✅ Simpan perubahan status sidebar ke localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', isSidebarCollapsed.toString());
+  }, [isSidebarCollapsed]);
+
+  // ✅ Cek autentikasi admin
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
@@ -51,15 +65,13 @@ export default function AdminLayout({
   return (
     <div
       className="flex min-h-screen"
-      style={{ backgroundColor: '#E5E5E5', color: '#1F2932' }} 
+      style={{ backgroundColor: '#E5E5E5', color: '#1F2932' }}
     >
-      {/* Sidebar */}
       <AdminSidebar
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
       />
-
-      {/* Main Content */}
+      
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
           isSidebarCollapsed ? 'ml-20' : 'ml-64'
