@@ -205,7 +205,7 @@ export default function DaftarPesertaPage() {
                   </td>
                   <td className="px-4 py-2 space-x-1">
                     <a
-                      href={peserta.Aksi.lihat}
+                      href={`/admin/daftarPeserta/lihatPeserta?id=${peserta.ID_Peserta}`}
                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs"
                     >
                       Lihat

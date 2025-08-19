@@ -56,7 +56,7 @@ export default function UserSoalPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {filteredUjian.length === 0 && (
               <div className="col-span-full text-center text-gray-500 py-10">
-                Tidak ada ujian ditemukan.
+                Belum ada ujian yang di mulai.
               </div>
             )}
 
