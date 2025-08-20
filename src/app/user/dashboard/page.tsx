@@ -75,10 +75,14 @@ export default function UserDashboardPage() {
     setKodeError('');
     setShowModal(true);
   };
-
+  
   const handleVerifikasiKode = () => {
     if (kodeInput === selectedUjian?.kode) {
-      router.push(`/user/soal`);
+      // Simpan ujian_id ke localStorage
+      localStorage.setItem('ujian_id', selectedUjian.id.toString());
+
+      // Redirect ke halaman soal
+      router.push('/user/soal');
     } else {
       setKodeError('Kode soal salah. Coba lagi.');
     }

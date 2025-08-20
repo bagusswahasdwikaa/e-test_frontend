@@ -1,86 +1,133 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import UserLayout from '@/components/UserLayout';
 import axios from '@/services/axios';
+import { useSearchParams } from 'next/navigation';
 
-interface Ujian {
-  id: number;
-  nama: string;
-  waktu: number;
-  jumlah_soal: number;
+interface Jawaban {
+  jawaban: string;
+  is_correct: boolean;
 }
 
-export default function UserSoalPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [userName, setUserName] = useState('User');
-  const [ujianList, setUjianList] = useState<Ujian[]>([]);
+interface Soal {
+  id: number;
+  pertanyaan: string;
+  media_type: string;
+  media_path: string | null;
+  jawabans: Record<'A' | 'B' | 'C' | 'D', Jawaban>;
+}
+
+export default function SoalPage() {
+  const searchParams = useSearchParams();
+  const ujianId = searchParams.get('ujian_id'); // ambil dari query param
+  const [soals, setSoals] = useState<Soal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUserAndUjian = async () => {
-      try {
-        const userRes = await axios.get('/me');
-        if (userRes.data) {
-          setUserName(
-            `${userRes.data.first_name ?? ''} ${userRes.data.last_name ?? ''}`.trim() || 'User'
-          );
-        }
+    if (!ujianId) return;
 
-        const ujianRes = await axios.get('/ujian');
-        setUjianList(ujianRes.data || []);
+    const fetchSoals = async () => {
+      try {
+        const response = await axios.get(`/soals/by-ujian/${ujianId}`);
+        setSoals(response.data.data);
       } catch (error) {
-        setUserName('User');
-        setUjianList([]);
+        console.error('Gagal ambil soal:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserAndUjian();
-  }, []);
+    fetchSoals();
+  }, [ujianId]);
 
-  const filteredUjian = ujianList.filter((ujian) =>
-    ujian.nama.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (loading) {
+    return <p className="p-4">Memuat soal...</p>;
+  }
+
+  if (soals.length === 0) {
+    return <p className="p-4">Tidak ada soal tersedia.</p>;
+  }
+
+  const currentSoal = soals[currentIndex];
+
+  const handleNext = () => {
+    setSelectedAnswer(null);
+    if (currentIndex < soals.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    setSelectedAnswer(null);
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
 
   return (
-    <UserLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
-      <main className="flex-1 p-8 overflow-auto">
-        <h1 className="text-2xl font-semibold mb-5 text-gray-800">
-          Selamat datang, {userName}!
-        </h1>
-        {loading ? (
-          <p>Memuat data...</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {filteredUjian.length === 0 && (
-              <div className="col-span-full text-center text-gray-500 py-10">
-                Belum ada ujian yang di mulai.
-              </div>
-            )}
+    <div className="p-8 bg-gray-100 min-h-screen">
+      <h1 className="text-xl font-bold mb-4">Soal {currentIndex + 1}:</h1>
+      <div className="bg-white p-6 rounded shadow-md max-w-3xl mx-auto">
+        <p className="mb-4">{currentSoal.pertanyaan}</p>
 
-            {filteredUjian.map(({ id, nama, waktu, jumlah_soal }) => (
-              <div
-                key={id}
-                className="bg-white rounded-lg shadow p-6 flex flex-col justify-between"
-              >
-                <div>
-                  <h2 className="text-lg font-semibold mb-2">{nama}</h2>
-                  <p>Waktu: {waktu} Menit</p>
-                  <p>Jumlah Soal: {jumlah_soal}</p>
-                </div>
-                <button
-                  className="mt-6 bg-black text-white rounded-md py-2 font-semibold hover:bg-gray-800 transition"
-                  onClick={() => alert(`Mulai ujian: ${nama}`)}
-                >
-                  Mulai
-                </button>
-              </div>
-            ))}
-          </div>
+        {currentSoal.media_type === 'image' && currentSoal.media_path && (
+          <img
+            src={`http://localhost:8000/storage/${currentSoal.media_path}`}
+            alt="Gambar soal"
+            className="mb-4 max-h-64 object-contain"
+          />
         )}
-      </main>
-    </UserLayout>
+
+        {currentSoal.media_type === 'video' && currentSoal.media_path && (
+          <video
+            controls
+            className="mb-4 w-full max-h-64 object-contain"
+            src={`http://localhost:8000/storage/${currentSoal.media_path}`}
+          />
+        )}
+
+        <div className="space-y-2">
+          {(['A', 'B', 'C', 'D'] as const).map((key) => (
+            <label
+              key={key}
+              className={`block px-4 py-2 border rounded cursor-pointer ${
+                selectedAnswer === key
+                  ? 'bg-blue-600 text-white'
+                  : 'hover:bg-blue-100'
+              }`}
+            >
+              <input
+                type="radio"
+                name={`soal-${currentSoal.id}`}
+                value={key}
+                checked={selectedAnswer === key}
+                onChange={() => setSelectedAnswer(key)}
+                className="mr-2"
+              />
+              {key}. {currentSoal.jawabans[key].jawaban}
+            </label>
+          ))}
+        </div>
+
+        <div className="flex justify-between mt-6">
+          <button
+            onClick={handlePrevious}
+            disabled={currentIndex === 0}
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+          >
+            Kembali
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={currentIndex === soals.length - 1}
+            className="px-4 py-2 bg-black text-white rounded disabled:opacity-50"
+          >
+            Lanjut
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

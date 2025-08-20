@@ -22,7 +22,6 @@ export default function AdminLayout({
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
-  // ✅ Ambil status sidebar dari localStorage saat pertama kali load
   useEffect(() => {
     const storedSidebarState = localStorage.getItem('sidebar-collapsed');
     if (storedSidebarState !== null) {
@@ -30,12 +29,10 @@ export default function AdminLayout({
     }
   }, []);
 
-  // ✅ Simpan perubahan status sidebar ke localStorage
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', isSidebarCollapsed.toString());
   }, [isSidebarCollapsed]);
 
-  // ✅ Cek autentikasi admin
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
@@ -53,7 +50,7 @@ export default function AdminLayout({
     return (
       <div
         className="flex items-center justify-center min-h-screen"
-        style={{ backgroundColor: '#D1D1D1', color: '#1F2937' }} // text-gray-800
+        style={{ backgroundColor: '#D1D1D1', color: '#1F2937' }}
       >
         Memeriksa akses...
       </div>
@@ -64,25 +61,27 @@ export default function AdminLayout({
 
   return (
     <div
-      className="flex min-h-screen"
+      className="flex min-h-screen overflow-hidden"
       style={{ backgroundColor: '#E5E5E5', color: '#1F2932' }}
     >
-      <AdminSidebar
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
-      />
-      
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? 'ml-20' : 'ml-64'
+        className={`flex-shrink-0 transition-width duration-300 ${
+          isSidebarCollapsed ? 'w-20' : 'w-64'
         }`}
       >
+        <AdminSidebar
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+      </div>
+
+      <div className="flex-1 flex flex-col overflow-auto">
         <AdminHeader
           searchTerm={searchTerm ?? ''}
           setSearchTerm={setSearchTerm ?? (() => {})}
           isSidebarCollapsed={isSidebarCollapsed}
         />
-        <main className="p-6">{children}</main>
+        <main className="p-6 min-w-0">{children}</main>
       </div>
     </div>
   );
