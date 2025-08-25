@@ -170,10 +170,10 @@ export default function AdminDashboard() {
               <thead>
                 <tr className="bg-blue-900 text-white text-center">
                   <th
-                    className="px-4 py-3 min-w-[70px] cursor-pointer select-none"
+                    className="px-4 py-3 min-w-[30px] cursor-pointer select-none"
                     onClick={toggleSort}
                   >
-                    <span className="inline-flex items-center justify-center gap-1">
+                    <span className="inline-flex items-center justify-center gap-3" style={{ width: 10 }}>
                       {sortDirection === 'asc' ? '▲' : '▼'} <span>No</span>
                     </span>
                   </th>

@@ -59,30 +59,38 @@ export default function AdminLayout({
 
   if (!isAuthorized) return null;
 
+  // Lebar sidebar dinamis
+  const sidebarWidth = isSidebarCollapsed ? 80 : 256;
+  const headerHeight = 56; // sesuai AdminHeader.tsx
+
   return (
     <div
-      className="flex min-h-screen overflow-hidden"
+      className="min-h-screen"
       style={{ backgroundColor: '#E5E5E5', color: '#1F2932' }}
     >
-      <div
-        className={`flex-shrink-0 transition-width duration-300 ${
-          isSidebarCollapsed ? 'w-20' : 'w-64'
-        }`}
-      >
-        <AdminSidebar
-          isCollapsed={isSidebarCollapsed}
-          setIsCollapsed={setIsSidebarCollapsed}
-        />
-      </div>
+      {/* Sidebar */}
+      <AdminSidebar
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+      />
 
-      <div className="flex-1 flex flex-col overflow-auto">
-        <AdminHeader
-          searchTerm={searchTerm ?? ''}
-          setSearchTerm={setSearchTerm ?? (() => {})}
-          isSidebarCollapsed={isSidebarCollapsed}
-        />
-        <main className="p-6 min-w-0">{children}</main>
-      </div>
+      {/* Header */}
+      <AdminHeader
+        searchTerm={searchTerm ?? ''}
+        setSearchTerm={setSearchTerm ?? (() => {})}
+        isSidebarCollapsed={isSidebarCollapsed}
+      />
+
+      {/* Konten */}
+      <main
+        className="p-6 min-w-0 transition-all duration-300"
+        style={{
+          marginLeft: sidebarWidth,
+          paddingTop: headerHeight + 16, // header + sedikit jarak
+        }}
+      >
+        {children}
+      </main>
     </div>
   );
 }

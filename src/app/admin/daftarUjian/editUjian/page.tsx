@@ -9,10 +9,11 @@ type StatusType = 'Aktif' | 'Non Aktif';
 interface UjianData {
   id_ujian: number;
   nama_ujian: string;
-  tanggal: string; // YYYY-MM-DD format
+  tanggal: string;       // YYYY-MM-DD
+  waktu_mulai: string;   // HH:mm
+  waktu_selesai: string; // HH:mm
   durasi: number;
   jumlah_soal: number;
-  nilai?: number | null;
   kode_soal: string;
   status: StatusType;
 }
@@ -26,6 +27,7 @@ export default function EditUjianPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // 🔹 Ambil data ujian dari backend
   useEffect(() => {
     if (!ujianId) {
       router.push('/admin/daftarUjian');
@@ -35,15 +37,28 @@ export default function EditUjianPage() {
     const fetchUjian = async () => {
       try {
         const res = await fetch(`http://localhost:8000/api/ujians/${ujianId}`, {
-          headers: {
-            Accept: 'application/json',
-          },
+          headers: { Accept: 'application/json' },
         });
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
-        setUjian(data);
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+        const json = await res.json();
+        const data = json.data;
+
+        const mulai = new Date(data.tanggal_mulai);
+        const akhir = new Date(data.tanggal_akhir);
+
+        setUjian({
+          id_ujian: data.id_ujian,
+          nama_ujian: data.nama_ujian,
+          tanggal: data.tanggal_mulai.slice(0, 10),
+          waktu_mulai: mulai.toTimeString().slice(0, 5),   // HH:mm
+          waktu_selesai: akhir.toTimeString().slice(0, 5), // HH:mm
+          durasi: data.durasi,
+          jumlah_soal: data.jumlah_soal,
+          kode_soal: data.kode_soal,
+          status: data.status as StatusType,
+        });
       } catch (error) {
         console.error('Fetch error:', error);
         alert('Gagal memuat data ujian.');
@@ -61,37 +76,40 @@ export default function EditUjianPage() {
     setUjian({ ...ujian, [field]: value });
   };
 
+  // 🔹 Kirim perubahan ke backend
   const handleSubmit = async () => {
     if (!ujian) return;
-
     setSaving(true);
+
     try {
+      const tanggalMulai = `${ujian.tanggal} ${ujian.waktu_mulai}:00`;
+      const tanggalAkhir = `${ujian.tanggal} ${ujian.waktu_selesai}:00`;
+
+      const payload: Record<string, any> = {
+        nama_ujian: ujian.nama_ujian,
+        tanggal_mulai: tanggalMulai,
+        tanggal_akhir: tanggalAkhir,
+        durasi: ujian.durasi,
+        jumlah_soal: ujian.jumlah_soal,
+        kode_soal: ujian.kode_soal,
+      };
+
       const res = await fetch(`http://localhost:8000/api/ujians/${ujian.id_ujian}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          nama_ujian: ujian.nama_ujian,
-          tanggal: ujian.tanggal,
-          durasi: ujian.durasi,
-          jumlah_soal: ujian.jumlah_soal,
-          nilai: ujian.nilai ?? null,
-          kode_soal: ujian.kode_soal,
-          status: ujian.status,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         console.error('Error response:', errData);
         alert('Gagal memperbarui data ujian.');
-        setSaving(false);
         return;
       }
 
-      // Berhasil simpan data ujian, langsung ke halaman edit soal
       router.push(`/admin/daftarUjian/editUjian/editSoal?ujian_id=${ujian.id_ujian}`);
     } catch (error) {
       console.error('Submit error:', error);
@@ -109,6 +127,7 @@ export default function EditUjianPage() {
       <div className="max-w-3xl mx-auto bg-white p-6 mt-6 rounded shadow space-y-4">
         <h1 className="text-2xl font-bold">Edit Ujian</h1>
 
+        {/* Nama Ujian */}
         <div>
           <label className="block mb-1 font-semibold">Nama Ujian</label>
           <input
@@ -116,21 +135,43 @@ export default function EditUjianPage() {
             value={ujian.nama_ujian}
             onChange={e => handleChange('nama_ujian', e.target.value)}
             className="w-full border rounded px-3 py-2"
-            required
           />
         </div>
 
+        {/* Tanggal */}
         <div>
-          <label className="block mb-1 font-semibold">Tanggal</label>
+          <label className="block mb-1 font-semibold">Tanggal Ujian</label>
           <input
             type="date"
-            value={ujian.tanggal.slice(0, 10)}
+            value={ujian.tanggal}
             onChange={e => handleChange('tanggal', e.target.value)}
             className="w-full border rounded px-3 py-2"
-            required
           />
         </div>
 
+        {/* Waktu Mulai */}
+        <div>
+          <label className="block mb-1 font-semibold">Waktu Mulai</label>
+          <input
+            type="time"
+            value={ujian.waktu_mulai}
+            onChange={e => handleChange('waktu_mulai', e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Waktu Selesai */}
+        <div>
+          <label className="block mb-1 font-semibold">Waktu Selesai</label>
+          <input
+            type="time"
+            value={ujian.waktu_selesai}
+            onChange={e => handleChange('waktu_selesai', e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Durasi */}
         <div>
           <label className="block mb-1 font-semibold">Durasi (menit)</label>
           <input
@@ -139,10 +180,10 @@ export default function EditUjianPage() {
             value={ujian.durasi}
             onChange={e => handleChange('durasi', Number(e.target.value))}
             className="w-full border rounded px-3 py-2"
-            required
           />
         </div>
 
+        {/* Jumlah Soal */}
         <div>
           <label className="block mb-1 font-semibold">Jumlah Soal</label>
           <input
@@ -151,25 +192,10 @@ export default function EditUjianPage() {
             value={ujian.jumlah_soal}
             onChange={e => handleChange('jumlah_soal', Number(e.target.value))}
             className="w-full border rounded px-3 py-2"
-            required
           />
         </div>
 
-        <div>
-          <label className="block mb-1 font-semibold">Nilai (opsional)</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={0.01}
-            value={ujian.nilai ?? ''}
-            onChange={e =>
-              handleChange('nilai', e.target.value === '' ? null : Number(e.target.value))
-            }
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
+        {/* Kode Soal */}
         <div>
           <label className="block mb-1 font-semibold">Kode Soal</label>
           <input
@@ -177,23 +203,10 @@ export default function EditUjianPage() {
             value={ujian.kode_soal}
             onChange={e => handleChange('kode_soal', e.target.value)}
             className="w-full border rounded px-3 py-2"
-            required
           />
         </div>
 
-        <div>
-          <label className="block mb-1 font-semibold">Status</label>
-          <select
-            value={ujian.status}
-            onChange={e => handleChange('status', e.target.value as StatusType)}
-            className="w-full border rounded px-3 py-2 cursor-pointer"
-            required
-          >
-            <option value="Aktif">Aktif</option>
-            <option value="Non Aktif">Non Aktif</option>
-          </select>
-        </div>
-
+        {/* Tombol Aksi */}
         <div className="flex justify-between mt-6">
           <button
             onClick={() => router.push('/admin/daftarUjian')}
@@ -202,7 +215,6 @@ export default function EditUjianPage() {
           >
             Kembali
           </button>
-
           <button
             onClick={handleSubmit}
             disabled={saving}

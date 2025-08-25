@@ -237,13 +237,13 @@ export default function DaftarPesertaPage() {
                   <td className="px-4 py-2 text-center align-middle space-x-2 whitespace-nowrap">
                     <button
                       onClick={() => router.push(`/admin/daftarPeserta/lihatPeserta?id=${peserta.ID_Peserta}`)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs"
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
                     >
                       Lihat
                     </button>
                     <button
                       onClick={() => router.push(`/admin/daftarPeserta/editPeserta?id=${peserta.ID_Peserta}`)}
-                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-xs"
+                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
                     >
                       Edit
                     </button>
@@ -264,7 +264,7 @@ export default function DaftarPesertaPage() {
                             .catch(() => alert('Terjadi kesalahan saat menghapus peserta.'));
                         }
                       }}
-                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded text-xs"
+                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
                     >
                       Hapus
                     </button>

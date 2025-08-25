@@ -9,70 +9,72 @@ export default function BuatSoalPage() {
 
   const [formData, setFormData] = useState({
     nama: '',
-    tanggal: '',
-    durasi: '',
-    status: false,
     kode: '',
     jumlahSoal: '',
+    tanggalMulai: '',
+    tanggalAkhir: '',
+    durasi: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }));
+  };
+
+  const formatDateTime = (value: string) => {
+    // Input datetime-local -> format Y-m-d H:i:s
+    return value ? value.replace('T', ' ') + ':00' : '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validasi
-    if (
-      !formData.nama ||
-      !formData.kode ||
-      !formData.jumlahSoal ||
-      !formData.tanggal ||
-      !formData.durasi
-    ) {
+    const { nama, kode, jumlahSoal, tanggalMulai, tanggalAkhir, durasi } = formData;
+
+    if (!nama || !kode || !jumlahSoal || !tanggalMulai || !tanggalAkhir || !durasi) {
       alert('Mohon lengkapi semua data terlebih dahulu.');
       return;
     }
 
     try {
+      const payload = {
+        nama_ujian: nama,
+        kode_soal: kode,
+        jumlah_soal: parseInt(jumlahSoal),
+        durasi: parseInt(durasi),
+        tanggal_mulai: formatDateTime(tanggalMulai),
+        tanggal_akhir: formatDateTime(tanggalAkhir),
+        // status & nilai otomatis di backend
+      };
+
       const response = await fetch('http://localhost:8000/api/ujians', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept' : 'aplication/json',
+          Accept: 'application/json',
         },
-        body: JSON.stringify({
-          nama_ujian: formData.nama,
-          tanggal: formData.tanggal,
-          durasi: parseInt(formData.durasi),
-          jumlah_soal: parseInt(formData.jumlahSoal),
-          kode_soal: formData.kode,
-          status: formData.status ? 'Aktif' : 'Non Aktif',
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Gagal menyimpan ujian:', errorData);
-        alert('Gagal menyimpan ujian.');
+        const error = await response.json();
+        console.error('Gagal menyimpan:', error);
+        alert('Gagal menyimpan ujian: ' + (error.message || 'Terjadi kesalahan.'));
         return;
       }
 
-      const data = await response.json();
-
+      const result = await response.json();
       alert('Ujian berhasil dibuat!');
 
-      // Navigasi ke form input soal, kirim jumlah soal juga
+      // Arahkan ke halaman tambah soal
       router.push(
-        `/admin/daftarUjian/buatSoal/soal/?ujian_id=${data.data.id_ujian}&jumlah_soal=${formData.jumlahSoal}`
+        `/admin/daftarUjian/buatSoal/soal/?ujian_id=${result.data.id_ujian}&jumlah_soal=${jumlahSoal}`
       );
-    } catch (error) {
-      console.error('Terjadi kesalahan:', error);
+    } catch (err) {
+      console.error('Error:', err);
       alert('Terjadi kesalahan saat menyimpan ujian.');
     }
   };
@@ -90,9 +92,9 @@ export default function BuatSoalPage() {
               name="nama"
               value={formData.nama}
               onChange={handleChange}
-              required
               className="w-full border rounded px-3 py-2"
-              placeholder="Contoh: Ujian Akhir"
+              placeholder="Contoh: Ujian Akhir Semester"
+              required
             />
           </div>
 
@@ -104,9 +106,9 @@ export default function BuatSoalPage() {
               name="kode"
               value={formData.kode}
               onChange={handleChange}
-              required
               className="w-full border rounded px-3 py-2"
               placeholder="Contoh: UJ001"
+              required
             />
           </div>
 
@@ -118,22 +120,34 @@ export default function BuatSoalPage() {
               name="jumlahSoal"
               value={formData.jumlahSoal}
               onChange={handleChange}
-              required
               className="w-full border rounded px-3 py-2"
-              placeholder="Contoh: 20"
+              required
             />
           </div>
 
-          {/* Tanggal */}
+          {/* Tanggal Mulai */}
           <div>
-            <label className="block font-medium mb-1">Tanggal</label>
+            <label className="block font-medium mb-1">Tanggal Mulai</label>
             <input
-              type="date"
-              name="tanggal"
-              value={formData.tanggal}
+              type="datetime-local"
+              name="tanggalMulai"
+              value={formData.tanggalMulai}
               onChange={handleChange}
-              required
               className="w-full border rounded px-3 py-2"
+              required
+            />
+          </div>
+
+          {/* Tanggal Akhir */}
+          <div>
+            <label className="block font-medium mb-1">Tanggal Akhir</label>
+            <input
+              type="datetime-local"
+              name="tanggalAkhir"
+              value={formData.tanggalAkhir}
+              onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
             />
           </div>
 
@@ -145,22 +159,10 @@ export default function BuatSoalPage() {
               name="durasi"
               value={formData.durasi}
               onChange={handleChange}
-              required
               className="w-full border rounded px-3 py-2"
               placeholder="Contoh: 90"
+              required
             />
-          </div>
-
-          {/* Status */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="status"
-              checked={formData.status}
-              onChange={handleChange}
-              className="w-5 h-5"
-            />
-            <label className="text-sm">Aktifkan ujian?</label>
           </div>
 
           {/* Tombol Aksi */}
@@ -168,13 +170,13 @@ export default function BuatSoalPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded cursor-pointer"
+              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded"
             >
               Simpan
             </button>

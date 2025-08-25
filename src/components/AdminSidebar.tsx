@@ -22,31 +22,26 @@ function Hamburger({ isOpen }: { isOpen: boolean }) {
     <div
       className="
         flex flex-col justify-center items-center cursor-pointer
-        p-2 rounded
+        w-9 h-9 rounded-md
         transition duration-300
-        hover:drop-shadow-[3px_0_4px_rgba(255,255,255,0.5)]
-        hover:bg-gray-700
+        hover:bg-gray-700 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]
       "
       aria-label="Hamburger menu"
-      style={{ width: 38, height: 32 }} // 32x32 px kotak hover lebih pas
     >
+      {/* Bar 1 */}
       <span
-        className={`
-          block h-[2px] w-6 bg-white rounded transform transition duration-1500 ease-in-out origin-left
-          ${isOpen ? 'rotate-45 translate-y-[4px]' : ''}
-        `}
+        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
+        ${isOpen ? 'rotate-45 translate-y-2' : ''}`}
       />
+      {/* Bar 2 */}
       <span
-        className={`
-          block h-[2px] w-6 bg-white rounded my-[4px] transition duration-1500 ease-out-in
-          ${isOpen ? 'opacity-0' : 'opacity-100'}
-        `}
+        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
+        ${isOpen ? 'opacity-0' : 'opacity-100'} my-1`}
       />
+      {/* Bar 3 */}
       <span
-        className={`
-          block h-[2px] w-6 bg-white rounded transform transition duration-1000 ease-in-out origin-left
-          ${isOpen ? '-rotate-45 -translate-y-[4px]' : ''}
-        `}
+        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
+        ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}
       />
     </div>
   );
@@ -84,24 +79,28 @@ export default function AdminSidebar({
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-600 shadow-md box-border">
-          {!isCollapsed && (
-            <span className="text-xl font-bold text-white tracking-wide select-none">
-              Menu
-            </span>
-          )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded hover:bg-gray-700 transition"
-            aria-label="Toggle Sidebar"
-          >
-            <Hamburger isOpen={!isCollapsed} />
-          </button>
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 box-border">
+            {!isCollapsed && (
+              <span className="text-xl font-bold text-white tracking-wide select-none">
+                Menu
+              </span>
+            )}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 rounded hover:bg-gray-700 transition"
+              aria-label="Toggle Sidebar"
+            >
+              <Hamburger isOpen={!isCollapsed} />
+            </button>
+          </div>
+
+          {/* Garis tipis bawah hamburger */}
+          <div className="border-b border-gray-700 mx-2 mt-[-12]" />
         </div>
 
         {/* Menu List */}
-        <nav className="flex flex-col px-2 py-4 gap-2 flex-1">
+        <nav className="flex flex-col px-2 py-7 gap-2 flex-1">
           {menuItems.map(({ label, href, icon }) => {
             const isActive = pathname === href;
             const baseClasses = `relative group flex items-center ${
