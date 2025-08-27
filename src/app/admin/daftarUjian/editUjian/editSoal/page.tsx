@@ -58,13 +58,22 @@ export default function EditSoalPage() {
       return;
     }
 
+    const jumlahSoalParam = parseInt(params.get('jumlah_soal') || '', 10);
+
     const fetchUjian = async () => {
       try {
         const resUjian = await fetch(`http://127.0.0.1:8000/api/ujians/${ujianId}`);
         if (!resUjian.ok) throw new Error('Gagal fetch ujian');
         const ujianData: UjianData = await resUjian.json();
-        setUjian(ujianData);
-        return ujianData;
+
+        // Gunakan query param jika tersedia, jika tidak pakai dari API
+        const jumlahSoal = !isNaN(jumlahSoalParam) && jumlahSoalParam > 0
+          ? jumlahSoalParam
+          : ujianData.jumlah_soal;
+
+        setUjian({ ...ujianData, jumlah_soal: jumlahSoal });
+
+        return { ...ujianData, jumlah_soal: jumlahSoal };
       } catch (error) {
         console.error(error);
         alert('Gagal memuat data ujian.');
@@ -104,7 +113,7 @@ export default function EditSoalPage() {
           };
         });
 
-        // Tambahkan soal kosong jika kurang dari jumlah ujian
+        // Tambahkan soal kosong jika kurang
         if (jumlahSoal > soalList.length) {
           const kurang = jumlahSoal - soalList.length;
           for (let i = 0; i < kurang; i++) {
@@ -123,10 +132,12 @@ export default function EditSoalPage() {
 
         setSoals(soalList);
 
-        // Set preview media soal berdasarkan soal yg ada
+        // Set preview media
         const newPreviews: Record<string, string | null> = {};
         arr.forEach(item => {
-          newPreviews[item.id] = item.media_path ? `http://127.0.0.1:8000/storage/${item.media_path}` : null;
+          newPreviews[item.id] = item.media_path
+            ? `http://127.0.0.1:8000/storage/${item.media_path}`
+            : null;
         });
         setPreviews(newPreviews);
       } catch (error) {
@@ -144,8 +155,7 @@ export default function EditSoalPage() {
         await fetchSoal(ujianData.jumlah_soal);
       }
     })();
-
-  }, [ujianId, router]);
+  }, [ujianId, router, params]);
 
   // Update field soal by localId
   const onChangeSoal = (

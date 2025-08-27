@@ -1,7 +1,6 @@
 'use client';
 
 import React, { Dispatch, SetStateAction } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   FiHome,
@@ -10,6 +9,7 @@ import {
   FiLogOut,
   FiUser,
 } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 
 interface UserSidebarProps {
   isCollapsed: boolean;
@@ -20,32 +20,28 @@ function Hamburger({ isOpen }: { isOpen: boolean }) {
   return (
     <div
       className="
-        flex flex-col justify-center items-center cursor-pointer
-        p-2 rounded
+        flex flex-col justify-center items-center
+        w-9 h-9 rounded-md
         transition duration-300
-        hover:drop-shadow-[3px_0_4px_rgba(255,255,255,0.5)]
-        hover:bg-gray-700
+        hover:bg-gray-700 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]
+        cursor-pointer
       "
       aria-label="Hamburger menu"
-      style={{ width: 38, height: 32 }} // 32x32 px kotak hover lebih pas
     >
+      {/* Bar 1 */}
       <span
-        className={`
-          block h-[2px] w-6 bg-white rounded transform transition duration-1500 ease-in-out origin-left
-          ${isOpen ? 'rotate-45 translate-y-[4px]' : ''}
-        `}
+        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
+        ${isOpen ? 'rotate-45 translate-y-2' : ''}`}
       />
+      {/* Bar 2 */}
       <span
-        className={`
-          block h-[2px] w-6 bg-white rounded my-[4px] transition duration-1500 ease-in-out
-          ${isOpen ? 'opacity-0' : 'opacity-100'}
-        `}
+        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
+        ${isOpen ? 'opacity-0' : 'opacity-100'} my-1`}
       />
+      {/* Bar 3 */}
       <span
-        className={`
-          block h-[2px] w-6 bg-white rounded transform transition duration-1000 ease-in-out origin-left
-          ${isOpen ? '-rotate-45 -translate-y-[4px]' : ''}
-        `}
+        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
+        ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}
       />
     </div>
   );
@@ -78,66 +74,64 @@ export default function UserSidebar({
 
   return (
     <div className="fixed top-0 left-0 h-screen z-50">
-      <aside
-        className={`bg-gradient-to-b from-gray-900 to-gray-800 text-white h-full flex flex-col transition-all duration-300 shadow-lg ${
-          isCollapsed ? 'w-20' : 'w-64'
-        }`}
+      <motion.aside
+        initial={false}
+        animate={{ width: isCollapsed ? 80 : 260 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="bg-gradient-to-b from-gray-900 to-gray-800 text-white h-full flex flex-col shadow-lg overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-600 shadow-md box-border">
+        <div className="flex items-center justify-between px-4 py-3">
           {!isCollapsed && (
-            <span className="text-xl font-bold text-white tracking-wide select-none">
+            <span className="text-xl font-bold tracking-wide select-none">
               Menu
             </span>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded hover:bg-gray-700 transition"
+            className="p-1 rounded hover:bg-gray-700 transition cursor-pointer"
             aria-label="Toggle Sidebar"
           >
             <Hamburger isOpen={!isCollapsed} />
           </button>
         </div>
 
+        <div className="border-b border-gray-700 mx-2 mt-[-12]" />
+
         {/* Menu List */}
-        <nav className="flex flex-col px-2 py-4 gap-2 flex-1">
+        <nav className="flex flex-col px-2 py-6 gap-2 flex-1">
           {menuItems.map(({ label, href, icon }) => {
             const isActive = pathname === href;
             const baseClasses = `relative group flex items-center ${
               isCollapsed ? 'justify-center' : ''
-            } gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
+            } gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 cursor-pointer ${
               isActive
                 ? 'bg-gray-400 text-white shadow'
                 : 'hover:bg-gray-700 text-gray-300'
             }`;
 
-            if (isCollapsed) {
-              return (
-                <div key={href} className={baseClasses}>
-                  <Link href={href}>
-                    <span className="flex items-center justify-center w-6 h-6 text-lg leading-none">
-                      {icon}
-                      <span className="absolute left-full top-1/2 -translate-y-1/2 ml-3 opacity-0 group-hover:opacity-100 bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 transition duration-300 whitespace-nowrap shadow-lg pointer-events-none">
-                        {label}
-                      </span>
-                    </span>
-                  </Link>
-                </div>
-              );
-            } else {
-              return (
-                <button
-                  key={href}
-                  onClick={() => handleNavigation(href)}
-                  className={baseClasses}
-                >
-                  <span className="text-lg flex items-center justify-center w-6 h-6 min-w-[24px]">
-                    {icon}
-                  </span>
-                  <span className="whitespace-nowrap cursor-pointer">{label}</span>
-                </button>
-              );
-            }
+            return (
+              <button
+                key={href}
+                onClick={() => handleNavigation(href)}
+                className={baseClasses}
+                title={isCollapsed ? label : ''}
+              >
+                <span className="text-lg flex items-center justify-center w-6 h-6 min-w-[24px]">
+                  {icon}
+                </span>
+                {!isCollapsed && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: isCollapsed ? 0 : 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="whitespace-nowrap"
+                  >
+                    {label}
+                  </motion.span>
+                )}
+              </button>
+            );
           })}
         </nav>
 
@@ -147,19 +141,22 @@ export default function UserSidebar({
             <button
               onClick={handleLogout}
               className="flex items-center justify-center gap-2 w-full py-2 rounded-md font-semibold text-white bg-red-600 hover:bg-red-700 transition cursor-pointer"
+              title={isCollapsed ? 'Keluar' : ''}
             >
               <FiLogOut />
-              {!isCollapsed && <span>Keluar</span>}
+              {!isCollapsed && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: isCollapsed ? 0 : 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  Keluar
+                </motion.span>
+              )}
             </button>
-
-            {isCollapsed && (
-              <span className="absolute left-full ml-3 top-1/2 -translate-y-1/2 w-max opacity-0 group-hover:opacity-100 bg-gray-800 text-white text-xs rounded py-1 px-2 z-10 transition duration-300 whitespace-nowrap shadow-lg pointer-events-none">
-                Keluar
-              </span>
-            )}
           </div>
         </div>
-      </aside>
+      </motion.aside>
     </div>
   );
 }

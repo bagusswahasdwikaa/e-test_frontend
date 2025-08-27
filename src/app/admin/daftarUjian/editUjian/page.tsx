@@ -9,9 +9,8 @@ type StatusType = 'Aktif' | 'Non Aktif';
 interface UjianData {
   id_ujian: number;
   nama_ujian: string;
-  tanggal: string;       // YYYY-MM-DD
-  waktu_mulai: string;   // HH:mm
-  waktu_selesai: string; // HH:mm
+  tanggal_mulai: string; // Format: 'YYYY-MM-DDTHH:mm'
+  tanggal_akhir: string; // Format: 'YYYY-MM-DDTHH:mm'
   durasi: number;
   jumlah_soal: number;
   kode_soal: string;
@@ -27,7 +26,6 @@ export default function EditUjianPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // 🔹 Ambil data ujian dari backend
   useEffect(() => {
     if (!ujianId) {
       router.push('/admin/daftarUjian');
@@ -45,15 +43,16 @@ export default function EditUjianPage() {
         const json = await res.json();
         const data = json.data;
 
-        const mulai = new Date(data.tanggal_mulai);
-        const akhir = new Date(data.tanggal_akhir);
+        const formatDateTimeLocal = (isoDateStr: string) => {
+          const date = new Date(isoDateStr);
+          return date.toISOString().slice(0, 16);
+        };
 
         setUjian({
           id_ujian: data.id_ujian,
           nama_ujian: data.nama_ujian,
-          tanggal: data.tanggal_mulai.slice(0, 10),
-          waktu_mulai: mulai.toTimeString().slice(0, 5),   // HH:mm
-          waktu_selesai: akhir.toTimeString().slice(0, 5), // HH:mm
+          tanggal_mulai: formatDateTimeLocal(data.tanggal_mulai),
+          tanggal_akhir: formatDateTimeLocal(data.tanggal_akhir),
           durasi: data.durasi,
           jumlah_soal: data.jumlah_soal,
           kode_soal: data.kode_soal,
@@ -76,19 +75,34 @@ export default function EditUjianPage() {
     setUjian({ ...ujian, [field]: value });
   };
 
-  // 🔹 Kirim perubahan ke backend
   const handleSubmit = async () => {
     if (!ujian) return;
     setSaving(true);
 
     try {
-      const tanggalMulai = `${ujian.tanggal} ${ujian.waktu_mulai}:00`;
-      const tanggalAkhir = `${ujian.tanggal} ${ujian.waktu_selesai}:00`;
+      const mulaiDate = new Date(ujian.tanggal_mulai);
+      const akhirDate = new Date(ujian.tanggal_akhir);
 
-      const payload: Record<string, any> = {
+      if (mulaiDate >= akhirDate) {
+        alert('Tanggal Mulai harus lebih awal dari Tanggal Akhir.');
+        setSaving(false);
+        return;
+      }
+
+      if (ujian.jumlah_soal < 1) {
+        alert('Jumlah soal minimal 1.');
+        setSaving(false);
+        return;
+      }
+
+      const formatDateTime = (value: string) => {
+        return value.replace('T', ' ') + ':00';
+      };
+
+      const payload = {
         nama_ujian: ujian.nama_ujian,
-        tanggal_mulai: tanggalMulai,
-        tanggal_akhir: tanggalAkhir,
+        tanggal_mulai: formatDateTime(ujian.tanggal_mulai),
+        tanggal_akhir: formatDateTime(ujian.tanggal_akhir),
         durasi: ujian.durasi,
         jumlah_soal: ujian.jumlah_soal,
         kode_soal: ujian.kode_soal,
@@ -110,7 +124,12 @@ export default function EditUjianPage() {
         return;
       }
 
-      router.push(`/admin/daftarUjian/editUjian/editSoal?ujian_id=${ujian.id_ujian}`);
+      alert('Ujian berhasil diperbarui!');
+
+      // Redirect ke halaman editSoal dengan query jumlah_soal
+      router.push(
+        `/admin/daftarUjian/editUjian/editSoal?ujian_id=${ujian.id_ujian}&jumlah_soal=${ujian.jumlah_soal}`
+      );
     } catch (error) {
       console.error('Submit error:', error);
       alert('Terjadi kesalahan saat menyimpan.');
@@ -138,35 +157,24 @@ export default function EditUjianPage() {
           />
         </div>
 
-        {/* Tanggal */}
+        {/* Tanggal Mulai */}
         <div>
-          <label className="block mb-1 font-semibold">Tanggal Ujian</label>
+          <label className="block mb-1 font-semibold">Tanggal Mulai</label>
           <input
-            type="date"
-            value={ujian.tanggal}
-            onChange={e => handleChange('tanggal', e.target.value)}
+            type="datetime-local"
+            value={ujian.tanggal_mulai}
+            onChange={e => handleChange('tanggal_mulai', e.target.value)}
             className="w-full border rounded px-3 py-2"
           />
         </div>
 
-        {/* Waktu Mulai */}
+        {/* Tanggal Akhir */}
         <div>
-          <label className="block mb-1 font-semibold">Waktu Mulai</label>
+          <label className="block mb-1 font-semibold">Tanggal Akhir</label>
           <input
-            type="time"
-            value={ujian.waktu_mulai}
-            onChange={e => handleChange('waktu_mulai', e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
-        {/* Waktu Selesai */}
-        <div>
-          <label className="block mb-1 font-semibold">Waktu Selesai</label>
-          <input
-            type="time"
-            value={ujian.waktu_selesai}
-            onChange={e => handleChange('waktu_selesai', e.target.value)}
+            type="datetime-local"
+            value={ujian.tanggal_akhir}
+            onChange={e => handleChange('tanggal_akhir', e.target.value)}
             className="w-full border rounded px-3 py-2"
           />
         </div>
@@ -193,6 +201,9 @@ export default function EditUjianPage() {
             onChange={e => handleChange('jumlah_soal', Number(e.target.value))}
             className="w-full border rounded px-3 py-2"
           />
+          {ujian.jumlah_soal < 1 && (
+            <p className="text-red-500 text-sm mt-1">Jumlah soal minimal 1.</p>
+          )}
         </div>
 
         {/* Kode Soal */}

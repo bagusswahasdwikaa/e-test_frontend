@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 
@@ -17,11 +18,11 @@ export default function AdminLayout({
   setSearchTerm,
 }: AdminLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
-
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
+  // Load state sidebar dari localStorage
   useEffect(() => {
     const storedSidebarState = localStorage.getItem('sidebar-collapsed');
     if (storedSidebarState !== null) {
@@ -29,10 +30,12 @@ export default function AdminLayout({
     }
   }, []);
 
+  // Simpan state sidebar ke localStorage
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', isSidebarCollapsed.toString());
   }, [isSidebarCollapsed]);
 
+  // Cek autentikasi admin
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
@@ -59,9 +62,9 @@ export default function AdminLayout({
 
   if (!isAuthorized) return null;
 
-  // Lebar sidebar dinamis
-  const sidebarWidth = isSidebarCollapsed ? 80 : 256;
-  const headerHeight = 56; // sesuai AdminHeader.tsx
+  // ukuran dinamis
+  const sidebarWidth = isSidebarCollapsed ? 80 : 260; // 260px = w-64
+  const headerHeight = 56; // sesuai AdminHeader.tsx (h-14)
 
   return (
     <div
@@ -81,16 +84,15 @@ export default function AdminLayout({
         isSidebarCollapsed={isSidebarCollapsed}
       />
 
-      {/* Konten */}
-      <main
-        className="p-6 min-w-0 transition-all duration-300"
-        style={{
-          marginLeft: sidebarWidth,
-          paddingTop: headerHeight + 16, // header + sedikit jarak
-        }}
+      {/* Konten dengan animasi geser */}
+      <motion.main
+        animate={{ marginLeft: sidebarWidth }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="p-6 min-w-0"
+        style={{ paddingTop: headerHeight + 16 }} // header + margin top
       >
         {children}
-      </main>
+      </motion.main>
     </div>
   );
 }

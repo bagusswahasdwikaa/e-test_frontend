@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { ExamResult } from '@/types/index';
 import DatePicker from 'react-datepicker';
@@ -17,6 +17,9 @@ export default function AdminDashboard() {
 
   const [monthRange, setMonthRange] = useState<[Date | null, Date | null]>([null, null]);
   const [filterStatus, setFilterStatus] = useState('');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetch('http://localhost:8000/api/nilai-peserta')
@@ -38,7 +41,6 @@ export default function AdminDashboard() {
   const toggleSort = () =>
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
 
-  // Validasi rentang maksimal 6 bulan
   const isValidMonthRange = (start: Date | null, end: Date | null): boolean => {
     if (!start || !end) return true;
     const startMonth = start.getMonth() + start.getFullYear() * 12;
@@ -46,13 +48,16 @@ export default function AdminDashboard() {
     return endMonth - startMonth <= 5;
   };
 
-  // Fungsi untuk menentukan apakah tanggal boleh dipilih di datepicker, batasi bulan maksimal 6 dari start jika sudah ada start
   const isSelectableDate = (date: Date) => {
-    const [start, end] = monthRange;
-    if (!start) return true; // bebas kalau belum mulai pilih
+    const [start] = monthRange;
+    if (!start) return true;
     const startMonth = start.getMonth() + start.getFullYear() * 12;
     const dateMonth = date.getMonth() + date.getFullYear() * 12;
     return dateMonth >= startMonth && dateMonth <= startMonth + 5;
+  };
+
+  const cancelMonthFilter = () => {
+    setMonthRange([null, null]);
   };
 
   const filteredData = examData.filter((item) => {
@@ -62,9 +67,7 @@ export default function AdminDashboard() {
       item.nama_ujian.toLowerCase().includes(searchTerm.toLowerCase());
 
     const itemDate = item.tanggal ? new Date(item.tanggal) : null;
-
     const [start, end] = monthRange;
-
     const matchesMonth =
       (!start || !end || !itemDate)
         ? true
@@ -76,7 +79,7 @@ export default function AdminDashboard() {
     return matchesSearch && matchesMonth && matchesStatus;
   });
 
-  const sortedData = React.useMemo(() => {
+  const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
       if (a.id_peserta < b.id_peserta) return sortDirection === 'asc' ? -1 : 1;
       if (a.id_peserta > b.id_peserta) return sortDirection === 'asc' ? 1 : -1;
@@ -84,98 +87,115 @@ export default function AdminDashboard() {
     });
   }, [filteredData, sortDirection]);
 
-  // Fungsi batal reset filter bulan
-  const cancelMonthFilter = () => {
-    setMonthRange([null, null]);
-  };
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const paginatedData = sortedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const goToPreviousPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   const handleExportExcel = () => {
     const exportUrl = 'http://127.0.0.1:8000/api/nilai-peserta/export';
     window.open(exportUrl, '_blank');
   };
 
+  const SortArrow = () => (
+    <button onClick={toggleSort} aria-label="Toggle sort" className="select-none" type="button">
+      {sortDirection === 'asc' ? '▲' : '▼'}
+    </button>
+  );
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
-      <h1 className="text-2xl font-semibold mb-5 text-gray-800">
-        Daftar Nilai Peserta Ujian
-      </h1>
+      {/* Header & Action */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">Daftar Nilai Peserta Ujian</h1>
+        <button
+          onClick={handleExportExcel}
+          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-2 hover:bg-gray-800 transition-colors duration-200 cursor-pointer"
+        >
+          <ArrowDownTrayIcon className="h-4 w-4 text-white stroke-2" />
+          <span className="text-sm font-medium" >Unduh Excel</span>
+        </button>
+      </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-6 mb-6 max-w-5xl">
-        {/* Filter Bulan Rentang */}
-          <div className="flex items-center gap-2">
-            <label className="font-medium text-gray-700 whitespace-nowrap">
-              Rentang Bulan:
-            </label>
-            <DatePicker
-              selectsRange
-              startDate={monthRange[0]}
-              endDate={monthRange[1]}
-              onChange={(update) => {
-                const [start, end] = update as [Date | null, Date | null];
-                if (start && end && !isValidMonthRange(start, end)) {
-                  alert('Maksimal rentang 6 bulan');
-                  return;
-                }
-                setMonthRange([start, end]);
-              }}
-              dateFormat="MM/yyyy"
-              showMonthYearPicker
-              placeholderText="Pilih rentang bulan"
-              className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44 cursor-pointer"
-              onChangeRaw={(event) => event?.preventDefault?.()}
-              filterDate={isSelectableDate}
-            />
-            {(monthRange[0] || monthRange[1]) && (
-              <button
-                className="ml-2 px-3 py-1 text-sm bg-gray-300 rounded hover:bg-gray-400 cursor-pointer"
-                onClick={cancelMonthFilter}
-                type="button"
-              >
-                Batal
-              </button>
-            )}
-          </div>
-          {/* Filter Status */}
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <label
-              htmlFor="filterStatus"
-              className="font-medium text-gray-700 select-none"
+      {/* Filter Controls */}
+      <div className="flex flex-wrap items-center gap-6 mb-6">
+        {/* Rentang Bulan */}
+        <div className="flex items-center gap-2">
+          <label className="font-medium text-gray-700 whitespace-nowrap">
+            Rentang Bulan:
+          </label>
+          <DatePicker
+            selectsRange
+            startDate={monthRange[0]}
+            endDate={monthRange[1]}
+            onChange={(update) => {
+              const [start, end] = update as [Date | null, Date | null];
+              if (start && end && !isValidMonthRange(start, end)) {
+                alert('Maksimal rentang 6 bulan');
+                return;
+              }
+              setMonthRange([start, end]);
+            }}
+            dateFormat="MM/yyyy"
+            showMonthYearPicker
+            placeholderText="Pilih rentang bulan"
+            className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44 cursor-pointer"
+            onChangeRaw={(event) => event?.preventDefault?.()}
+            filterDate={isSelectableDate}
+          />
+          {(monthRange[0] || monthRange[1]) && (
+            <button
+              className="ml-2 px-3 py-1 text-sm bg-gray-300 rounded hover:bg-gray-400 cursor-pointer"
+              onClick={cancelMonthFilter}
+              type="button"
             >
-              Filter Status:
-            </label>
-            <select
-              id="filterStatus"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-36 rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm
-                focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out cursor-pointer"
-            >
-              <option value="">Semua Status</option>
-              <option value="Selesai">Selesai</option>
-              <option value="Belum Dikerjakan">Belum Dikerjakan</option>
-            </select>
-          </div>
+              Batal
+            </button>
+          )}
         </div>
+
+        {/* Filter Status */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <label
+            htmlFor="filterStatus"
+            className="font-medium text-gray-700 select-none"
+          >
+            Filter Status:
+          </label>
+          <select
+            id="filterStatus"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="w-36 rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm
+              focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out cursor-pointer"
+          >
+            <option value="">Semua Status</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Belum Dikerjakan">Belum Dikerjakan</option>
+          </select>
+        </div>
+      </div>
+
       {/* Table */}
       {loading ? (
         <p className="text-gray-600">Memuat data...</p>
       ) : error ? (
         <p className="text-red-600">Error: {error}</p>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden max-w-full">
-          <div className="overflow-auto">
-            <table className="min-w-full text-sm text-gray-800 border-collapse">
-              <thead>
-                <tr className="bg-blue-900 text-white text-center">
-                  <th
-                    className="px-4 py-3 min-w-[30px] cursor-pointer select-none"
-                    onClick={toggleSort}
-                  >
-                    <span className="inline-flex items-center justify-center gap-3" style={{ width: 10 }}>
-                      {sortDirection === 'asc' ? '▲' : '▼'} <span>No</span>
-                    </span>
+        <>
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <table className="min-w-full text-sm text-gray-800 table-fixed">
+              <thead className="bg-blue-900 text-white text-center">
+                <tr>
+                  <th className="px-4 py-3" style={{ width: 70 }}>
+                    <div className="flex justify-center items-center gap-1">
+                      <SortArrow />
+                      No
+                    </div>
                   </th>
                   <th className="px-4 py-3">ID Peserta</th>
                   <th className="px-4 py-3">Nama Lengkap</th>
@@ -186,19 +206,19 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {sortedData.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-4 text-center text-gray-500">
+                    <td colSpan={7} className="text-center py-4 text-gray-500">
                       Data tidak ditemukan
                     </td>
                   </tr>
                 ) : (
-                  sortedData.map((item, idx) => (
+                  paginatedData.map((item, idx) => (
                     <tr
                       key={`${item.id_peserta}-${item.nama_ujian}`}
                       className="border-t text-center hover:bg-gray-50"
                     >
-                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                       <td className="px-4 py-2">{item.id_peserta.toString().padStart(3, '0')}</td>
                       <td className="px-4 py-2">{item.nama_lengkap}</td>
                       <td className="px-4 py-2">{item.tanggal ?? '-'}</td>
@@ -221,18 +241,27 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
 
-      <div className="mt-6 flex justify-end">
-        <button
-          className="bg-blue-900 hover:bg-blue-800 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 cursor-pointer"
-          onClick={handleExportExcel}
-        >
-          <ArrowDownTrayIcon className="h-5 w-5 text-white stroke-2" />
-          <span>Unduh Excel</span>
-        </button>
-      </div>
+          {/* Pagination */}
+          <div className="flex justify-between items-center px-2 py-4 text-sm text-gray-600 mt-3">
+            <button
+              onClick={goToPreviousPage}
+              disabled={currentPage === 1}
+              className={`${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'} px-3 py-1 rounded`}
+            >
+              Sebelumnya
+            </button>
+            <span>Halaman {currentPage} dari {totalPages}</span>
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              className={`${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'} px-3 py-1 rounded`}
+            >
+              Selanjutnya
+            </button>
+          </div>
+        </>
+      )}
     </AdminLayout>
   );
 }

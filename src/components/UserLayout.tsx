@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import UserSidebar from '@/components/UserSidebar';
 import UserHeader from '@/components/UserHeader';
 
@@ -16,12 +17,25 @@ export default function UserLayout({
   searchTerm,
   setSearchTerm,
 }: UserLayoutProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
+  // Load state sidebar dari localStorage
+  useEffect(() => {
+    const storedSidebarState = localStorage.getItem('sidebar-collapsed');
+    if (storedSidebarState !== null) {
+      setIsSidebarCollapsed(storedSidebarState === 'true');
+    }
+  }, []);
+
+  // Simpan state sidebar ke localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', isSidebarCollapsed.toString());
+  }, [isSidebarCollapsed]);
+
+  // Cek autentikasi user
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
@@ -48,9 +62,13 @@ export default function UserLayout({
 
   if (!isAuthorized) return null;
 
+  // ukuran dinamis
+  const sidebarWidth = isSidebarCollapsed ? 80 : 260; // 260px = w-64
+  const headerHeight = 56; // sesuai UserHeader.tsx (h-14)
+
   return (
     <div
-      className="flex min-h-screen"
+      className="min-h-screen"
       style={{ backgroundColor: '#E5E5E5', color: '#1F2932' }}
     >
       {/* Sidebar */}
@@ -59,19 +77,22 @@ export default function UserLayout({
         setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? 'ml-20' : 'ml-64'
-        }`}
+      {/* Header */}
+      <UserHeader
+        searchTerm={searchTerm ?? ''}
+        setSearchTerm={setSearchTerm ?? (() => {})}
+        isSidebarCollapsed={isSidebarCollapsed}
+      />
+
+      {/* Konten dengan animasi geser */}
+      <motion.main
+        animate={{ marginLeft: sidebarWidth }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="p-6 min-w-0"
+        style={{ paddingTop: headerHeight + 16 }} // header + margin top
       >
-        <UserHeader
-          searchTerm={searchTerm ?? ''}
-          setSearchTerm={setSearchTerm ?? (() => {})}
-          isSidebarCollapsed={isSidebarCollapsed}
-        />
-        <main className="p-6">{children}</main>
-      </div>
+        {children}
+      </motion.main>
     </div>
   );
 }

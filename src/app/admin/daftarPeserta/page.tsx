@@ -23,6 +23,10 @@ export default function DaftarPesertaPage() {
   const [error, setError] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   useEffect(() => {
     async function fetchPeserta() {
       setLoading(true);
@@ -101,6 +105,22 @@ export default function DaftarPesertaPage() {
       return 0;
     });
   }, [filteredData, sortDirection]);
+
+  // Pagination logic: hitung total halaman
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
+  // Ambil data peserta sesuai halaman sekarang
+  const paginatedData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Handler untuk pindah halaman sebelumnya
+  const goToPreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  // Handler untuk pindah halaman selanjutnya
+  const goToNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
 
   const SortArrow = () => (
     <button
@@ -190,21 +210,21 @@ export default function DaftarPesertaPage() {
               <th className="px-4 py-3 w-24">Avatar</th>
               <th className="px-4 py-3">Nama Lengkap</th>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3 w-24">Status</th>
+              <th className="px-4 py-3 w-24"style={{ width: 110 }}>Status</th>
               <th className="px-4 py-3 w-40">Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {sortedData.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-4 text-gray-500">
                   Tidak ada data ditemukan.
                 </td>
               </tr>
             ) : (
-              sortedData.map((peserta, index) => (
+              paginatedData.map((peserta, index) => (
                 <tr key={peserta.ID_Peserta} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-2 text-center align-middle">{index + 1}</td>
+                  <td className="px-4 py-2 text-center align-middle">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td className="px-4 py-2 text-center align-middle whitespace-nowrap">
                     {peserta.ID_Peserta}
                   </td>
@@ -274,6 +294,37 @@ export default function DaftarPesertaPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-between items-center px-2 py-1 text-sm text-gray-600 mt-3">
+        <button
+          onClick={goToPreviousPage}
+          disabled={currentPage === 1}
+          className={`${
+            currentPage === 1
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          } px-3 py-1 rounded`}
+          type="button"
+        >
+          Sebelumnya
+        </button>
+        <span>
+          Halaman {currentPage} dari {totalPages}
+        </span>
+        <button
+          onClick={goToNextPage}
+          disabled={currentPage === totalPages}
+          className={`${
+            currentPage === totalPages
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          } px-3 py-1 rounded`}
+          type="button"
+        >
+          Selanjutnya
+        </button>
       </div>
     </AdminLayout>
   );

@@ -27,22 +27,39 @@ export default function UserHeader({
 
   const router = useRouter();
 
+  // Ambil info user dari localStorage
+  const loadUserInfo = () => {
+    const firstName = localStorage.getItem('first_name');
+    const lastName = localStorage.getItem('last_name');
+    const profilePic = localStorage.getItem('profile_picture');
+
+    const name = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+    setUserName(name || 'User');
+
+    if (profilePic) {
+      const absoluteUrl = profilePic.startsWith('http')
+        ? profilePic
+        : `http://localhost:8000${profilePic}`;
+      setProfilePicture(absoluteUrl);
+    } else {
+      setProfilePicture(null);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const firstName = localStorage.getItem('first_name');
-      const lastName = localStorage.getItem('last_name');
-      const profilePic = localStorage.getItem('profile_picture');
+      loadUserInfo();
 
-      if (firstName || lastName) {
-        setUserName(`${firstName ?? ''} ${lastName ?? ''}`.trim());
-      }
+      // Optional: pantau storage jika diubah dari tab lain
+      const handleStorageChange = () => {
+        loadUserInfo();
+      };
 
-      if (profilePic) {
-        const absoluteUrl = profilePic.startsWith('http')
-          ? profilePic
-          : `http://localhost:8000${profilePic}`;
-        setProfilePicture(absoluteUrl);
-      }
+      window.addEventListener('storage', handleStorageChange);
+
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
     }
   }, []);
 
@@ -56,13 +73,23 @@ export default function UserHeader({
     router.push('/user/profil');
   };
 
+  // Lebar sidebar, 80px kalau collapse, 256px kalau terbuka
+  const sidebarWidth = isSidebarCollapsed ? 80 : 256;
+
   return (
     <header
-      className={`bg-blue-900 text-white flex items-center justify-between px-6 py-3 sticky top-0 z-30 transition-all duration-300`}
+      className={`
+        bg-blue-900 text-white flex items-center justify-between px-6 py-3
+        shadow-md transition-all duration-300
+      `}
       style={{
-        left: isSidebarCollapsed ? 80 : 256,
+        position: 'fixed',
+        top: 0,
+        left: sidebarWidth,
         right: 0,
-        position: 'sticky',
+        height: 56, // tinggi header agar konsisten
+        width: `calc(100% - ${sidebarWidth}px)`,
+        zIndex: 40, // lebih tinggi dari sidebar & konten
       }}
     >
       <div className="text-lg font-semibold select-none">E -Test</div>
@@ -105,7 +132,7 @@ export default function UserHeader({
 
         {isDropdownOpen && (
           <div
-            className="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded-lg shadow-lg z-40"
+            className="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded-lg shadow-lg z-50"
             style={{ top: '100%' }}
           >
             <ul className="p-2">
