@@ -3,6 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import {
+  EyeIcon,
+  PencilSquareIcon,
+  TrashIcon
+} from '@heroicons/react/24/outline';
+import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
 
 interface Peserta {
   ID_Peserta: number;
@@ -174,25 +180,30 @@ export default function DaftarPesertaPage() {
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <h1 className="text-2xl font-semibold text-gray-800">Daftar Peserta</h1>
-        <button
-          onClick={() => router.push('/admin/daftarPeserta/tambahPeserta')}
-          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium cursor-pointer whitespace-nowrap"
-          type="button"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={3}
-            stroke="currentColor"
-            className="w-5 h-5"
+      <div className="mb-6">
+        {/* Judul */}
+        <h1 className="text-2xl font-semibold text-gray-800 mb-2">Daftar Peserta</h1>
+
+        {/* Tombol Tambah Data */}
+        <div>
+          <button
+            onClick={() => router.push('/admin/daftarPeserta/tambahPeserta')}
+            className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium cursor-pointer"
+            type="button"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Tambah Data
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={3}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Tambah Data
+          </button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -280,46 +291,56 @@ export default function DaftarPesertaPage() {
                       {peserta.Status === 'aktif' ? 'Aktif' : 'Tidak Aktif'}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-center align-middle space-x-2 whitespace-nowrap">
-                    <button
-                      onClick={() =>
-                        router.push(`/admin/daftarPeserta/lihatPeserta?id=${peserta.ID_Peserta}`)
-                      }
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
-                    >
-                      Lihat
-                    </button>
-                    <button
-                      onClick={() =>
-                        router.push(`/admin/daftarPeserta/editPeserta?id=${peserta.ID_Peserta}`)
-                      }
-                      className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('Yakin ingin menghapus peserta ini?')) {
-                          fetch(`http://localhost:8000/api/peserta/${peserta.ID_Peserta}`, {
-                            method: 'DELETE',
-                            headers: {
-                              Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-                            },
-                          })
-                            .then((res) => {
-                              if (!res.ok) throw new Error('Gagal menghapus peserta');
-                              alert('Peserta berhasil dihapus.');
-                              setDataPeserta((prev) =>
-                                prev.filter((p) => p.ID_Peserta !== peserta.ID_Peserta)
-                              );
-                            })
-                            .catch(() => alert('Terjadi kesalahan saat menghapus peserta.'));
+                  <td className="py-2">
+                    <div className="flex justify-center gap-2">
+                      {/* Lihat */}
+                      <button
+                        onClick={() =>
+                          router.push(`/admin/daftarPeserta/lihatPeserta?id=${peserta.ID_Peserta}`)
                         }
-                      }}
-                      className="bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
-                    >
-                      Hapus
-                    </button>
+                        className="bg-blue-500 hover:bg-blue-600 p-2 rounded-md transition cursor-pointer"
+                        title="Lihat"
+                      >
+                        <EyeIconSolid className="w-4 h-4 text-white" />
+                      </button>
+
+                      {/* Edit */}
+                      <button
+                        onClick={() =>
+                          router.push(`/admin/daftarPeserta/editPeserta?id=${peserta.ID_Peserta}`)
+                        }
+                        className="bg-yellow-400 hover:bg-yellow-500 p-2 rounded-md transition cursor-pointer"
+                        title="Edit"
+                      >
+                        <PencilSquareIcon className="w-4 h-4 text-white" />
+                      </button>
+
+                      {/* Hapus */}
+                      <button
+                        onClick={() => {
+                          if (confirm('Yakin ingin menghapus peserta ini?')) {
+                            fetch(`http://localhost:8000/api/peserta/${peserta.ID_Peserta}`, {
+                              method: 'DELETE',
+                              headers: {
+                                Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                              },
+                            })
+                              .then((res) => {
+                                if (!res.ok) throw new Error('Gagal menghapus peserta');
+                                alert('Peserta berhasil dihapus.');
+                                setDataPeserta((prev) =>
+                                  prev.filter((p) => p.ID_Peserta !== peserta.ID_Peserta)
+                                );
+                              })
+                              .catch(() => alert('Terjadi kesalahan saat menghapus peserta.'));
+                          }
+                        }}
+                        className="bg-red-600 hover:bg-red-700 p-2 rounded-md transition cursor-pointer"
+                        title="Hapus"
+                      >
+                        <TrashIcon className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

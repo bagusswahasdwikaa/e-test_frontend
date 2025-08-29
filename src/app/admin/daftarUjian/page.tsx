@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
-import { ShareIcon } from '@heroicons/react/24/outline';
+import { ShareIcon, PencilSquareIcon, TrashIcon, EyeIcon, DocumentDuplicateIcon  } from '@heroicons/react/24/outline';
+import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
 
 interface Ujian {
   id: number;
@@ -24,22 +25,32 @@ interface Peserta {
   photo_url?: string | null;
 }
 
+interface PesertaList {
+  belum: Peserta[];
+  sudah: Peserta[];
+}
+
+
 type SortDirection = 'asc' | 'desc';
 
 export default function DaftarUjianPage() {
   const router = useRouter();
   const [dataUjian, setDataUjian] = useState<Ujian[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchPeserta, setSearchPeserta] = useState('');
   const [loading, setLoading] = useState(true);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const [showModal, setShowModal] = useState(false);
-  const [selectedUjian, setSelectedUjian] = useState<Ujian | null>(null);
-  const [pesertaList, setPesertaList] = useState<Peserta[]>([]);
+  const [pesertaList, setPesertaList] = useState<PesertaList>({
+    belum: [],
+    sudah: [],
+  });
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [selectedUjian, setSelectedUjian] = useState<Ujian | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const formatTanggal = (tanggal: string) => {
     if (!tanggal) return '-';
@@ -112,6 +123,19 @@ export default function DaftarUjianPage() {
     u.kode.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filterPeserta = (list: Peserta[]) => {
+    const term = searchPeserta.toLowerCase();
+    return list.filter(
+      (p) =>
+        p.Nama_Lengkap.toLowerCase().includes(term) ||
+        p.Email.toLowerCase().includes(term)
+    );
+  };
+
+  const pesertaBelumFiltered = filterPeserta(pesertaList.belum);
+  const pesertaSudahFiltered = filterPeserta(pesertaList.sudah);
+
+
   const sortedData = React.useMemo(() => {
     return [...filteredData].sort((a, b) => {
       const aTime = new Date(a.tanggal_mulai).getTime();
@@ -145,20 +169,50 @@ export default function DaftarUjianPage() {
 
   const openBagikanModal = async (ujian: Ujian) => {
     try {
-      const res = await fetch('http://localhost:8000/api/peserta');
+      // Ambil semua peserta
+      const res = await fetch('http://localhost:8000/api/list-peserta');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const list: Peserta[] = json.data.map((p: any) => ({
+
+      // Map data peserta ke format yang diinginkan
+      const semuaPeserta: Peserta[] = json.data.map((p: any) => ({
         ID_Peserta: p.ID_Peserta,
         Nama_Lengkap: p['Nama Lengkap'] ?? '—',
         Email: p.Email ?? '-',
-        Status: p.Status?.toLowerCase(),
+        Status: p.Status?.toLowerCase() ?? null,
         photo_url: p['Photo URL'] ?? null,
       }));
-      setPesertaList(list);
-      setSelectedEmails([]);
-      setSelectedUjian(ujian);
-      setShowModal(true);
+
+      // Filter peserta yang statusnya 'aktif' saja
+      const pesertaAktif = semuaPeserta.filter(p => p.Status === 'aktif');
+
+      // Ambil peserta yang sudah dibagikan ujian ini
+      const res2 = await fetch(`http://localhost:8000/api/ujians/${ujian.id}/users`);
+      if (!res2.ok) throw new Error(`HTTP ${res2.status} (assignedUsers)`);
+      const json2 = await res2.json();
+
+      // Mapping assigned users ke format Peserta minimal
+      const pesertaSudah: Peserta[] = json2.assigned_users.map((p: any) => ({
+        ID_Peserta: p.id,
+        Nama_Lengkap: p.name,
+        Email: p.email,
+        Status: 'aktif', // asumsi sudah aktif kalau bisa dikerjakan
+        photo_url: null,
+      }));
+
+      // Pisahkan peserta yang belum dibagikan (aktif & belum ada di pesertaSudah)
+      const pesertaSudahEmails = new Set(pesertaSudah.map(p => p.Email));
+      const pesertaBelum = pesertaAktif.filter(p => !pesertaSudahEmails.has(p.Email));
+
+      // Set state pesertaList dengan 2 array: belum dan sudah
+      setPesertaList({
+        belum: pesertaBelum,
+        sudah: pesertaSudah,
+      });
+
+      setSelectedEmails([]); // reset pilihan email
+      setSelectedUjian(ujian); // set ujian yang dipilih
+      setShowModal(true); // buka modal
     } catch (err: any) {
       console.error('Error fetch peserta:', err);
       alert(`Gagal mengambil daftar peserta: ${err.message}`);
@@ -173,7 +227,12 @@ export default function DaftarUjianPage() {
 
   const kirim = async () => {
     if (!selectedUjian || selectedEmails.length === 0) return;
-    const ids = pesertaList
+
+    // Gabungkan peserta dari 'belum' dan 'sudah'
+    const semuaPeserta = [...pesertaList.belum, ...pesertaList.sudah];
+
+    // Filter peserta yang emailnya terpilih (selectedEmails)
+    const ids = semuaPeserta
       .filter((p) => selectedEmails.includes(p.Email))
       .map((p) => p.ID_Peserta);
 
@@ -184,7 +243,7 @@ export default function DaftarUjianPage() {
         body: JSON.stringify({ user_ids: ids }),
       });
       if (!res.ok) throw new Error('Gagal assign peserta');
-      alert('Dikirim notifikasi.');
+      alert('Ujian Berhasil di bagikan.');
       setShowModal(false);
     } catch (err) {
       console.error(err);
@@ -204,24 +263,52 @@ export default function DaftarUjianPage() {
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Daftar Ujian</h1>
-        <button
-          onClick={() => router.push('/admin/daftarUjian/buatSoal')}
-          className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium cursor-pointer whitespace-nowrap"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={3}
-            stroke="currentColor"
-            className="w-5 h-5"
+      <div className="mb-6">
+        {/* Judul */}
+        <h1 className="text-2xl font-bold mb-2">Daftar Ujian</h1>
+
+        {/* Tombol-tombol */}
+        <div className="flex flex-wrap gap-2">
+          {/* Tombol Kloning */}
+          <button
+            onClick={() => alert('Fungsi kloning akan ditambahkan di sini')}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Buat Soal
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-2 10h2a2 2 0 002-2v-8a2 2 0 00-2-2h-2m-8 0v10a2 2 0 002 2h4"
+              />
+            </svg>
+            Kloning
+          </button>
+
+          {/* Tombol Buat Soal */}
+          <button
+            onClick={() => router.push('/admin/daftarUjian/buatSoal')}
+            className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition text-sm font-medium cursor-pointer"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={3}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Buat Soal
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -282,34 +369,40 @@ export default function DaftarUjianPage() {
                       </td>
                       <td className="text-center py-2">
                         <div className="flex flex-wrap justify-center gap-2">
+                          {/* Lihat Soal */}
                           <button
-                            onClick={() =>
-                              router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${u.id}`)
-                            }
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition text-xs"
+                            onClick={() => router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${u.id}`)}
+                            className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition cursor-pointer"
+                            title="Lihat Soal"
                           >
-                            Lihat
+                            <EyeIconSolid className="w-4 h-4" />
                           </button>
+
+                          {/* Edit Ujian */}
                           <button
-                            onClick={() =>
-                              router.push(`/admin/daftarUjian/editUjian?ujian_id=${u.id}`)
-                            }
-                            className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded transition text-xs"
+                            onClick={() => router.push(`/admin/daftarUjian/editUjian?ujian_id=${u.id}`)}
+                            className="p-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded transition cursor-pointer"
+                            title="Edit Ujian"
                           >
-                            Edit
+                            <PencilSquareIcon className="w-4 h-4" />
                           </button>
+
+                          {/* Hapus Ujian */}
                           <button
                             onClick={() => handleDelete(u.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition text-xs"
+                            className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition cursor-pointer"
+                            title="Hapus Ujian"
                           >
-                            Hapus
+                            <TrashIcon className="w-4 h-4" />
                           </button>
+
+                          {/* Bagikan Ujian */}
                           <button
                             onClick={() => openBagikanModal(u)}
-                            className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded flex items-center gap-1 transition text-xs"
+                            className="p-2 bg-green-700 hover:bg-green-800 text-white rounded transition cursor-pointer"
+                            title="Bagikan Ujian"
                           >
                             <ShareIcon className="w-4 h-4" />
-                            Bagikan
                           </button>
                         </div>
                       </td>
@@ -350,22 +443,30 @@ export default function DaftarUjianPage() {
         </>
       )}
 
-      {/* Modal Bagikan */}
+     {/* Modal Bagikan */}
       {showModal && selectedUjian && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-lg font-bold mb-4">
-              Bagikan Ujian:{' '}
-              <span className="text-blue-700">{selectedUjian.nama}</span>
+              Bagikan Ujian: <span className="text-blue-700">{selectedUjian.nama}</span>
             </h2>
-            <div className="mb-4 text-sm text-gray-600">Pilih peserta:</div>
-            <div className="border border-gray-300 rounded max-h-64 overflow-y-auto p-2 mb-4">
-              {pesertaList.length === 0 ? (
-                <p className="text-center text-gray-600">
-                  Tidak ada peserta tersedia
-                </p>
+
+            {/* Input Pencarian Peserta */}
+            <input
+              type="text"
+              placeholder="Cari peserta berdasarkan nama atau email..."
+              value={searchPeserta}
+              onChange={(e) => setSearchPeserta(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+
+            {/* Peserta Belum Dibagikan */}
+            <div className="mb-2 text-sm text-gray-600">Peserta Belum Dibagikan:</div>
+            <div className="border border-gray-300 rounded max-h-40 overflow-y-auto p-2 mb-4">
+              {pesertaBelumFiltered.length === 0 ? (
+                <p className="text-center text-gray-600">Tidak ada peserta tersedia</p>
               ) : (
-                pesertaList.map((p) => (
+                pesertaBelumFiltered.map((p) => (
                   <label
                     key={p.ID_Peserta}
                     className="flex items-center gap-2 mb-2 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
@@ -377,24 +478,50 @@ export default function DaftarUjianPage() {
                       className="w-5 h-5 cursor-pointer accent-blue-600"
                     />
                     <span className="select-none">
-                      {p.Nama_Lengkap} —{' '}
-                      <span className="text-gray-500">{p.Email}</span>
+                      {p.Nama_Lengkap} — <span className="text-gray-500">{p.Email}</span>
                     </span>
                   </label>
                 ))
               )}
             </div>
+
+            {/* Peserta Sudah Dibagikan */}
+            <div className="mb-2 text-sm text-gray-600">Peserta Sudah Dibagikan:</div>
+            <div className="border border-gray-300 rounded max-h-40 overflow-y-auto p-2 mb-4 bg-gray-50">
+              {pesertaSudahFiltered.length === 0 ? (
+                <p className="text-center text-gray-600">Belum ada peserta yang dibagikan</p>
+              ) : (
+                pesertaSudahFiltered.map((p) => (
+                  <label
+                    key={p.ID_Peserta}
+                    className="flex items-center gap-2 mb-2 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmails.includes(p.Email)}
+                      onChange={() => toggleEmail(p.Email)}
+                      className="w-5 h-5 cursor-pointer accent-blue-600"
+                    />
+                    <span className="select-none">
+                      {p.Nama_Lengkap} — <span className="text-gray-500">{p.Email}</span>
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+
+            {/* Tombol Aksi */}
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded transition"
+                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded transition cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={kirim}
                 disabled={selectedEmails.length === 0}
-                className={`px-4 py-2 rounded text-white ${
+                className={`px-4 py-2 rounded text-white transition cursor-pointer ${
                   selectedEmails.length === 0
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'

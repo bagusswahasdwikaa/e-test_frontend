@@ -10,7 +10,7 @@ interface Ujian {
   nama: string;
   durasi: number;
   jumlah_soal: number;
-  status: string;
+  status: string; // Diambil dari tabel 'ujians'
   kode_soal: string;
 }
 
@@ -50,14 +50,17 @@ export default function UserDashboardPage() {
 
         const rawData = response.data?.data ?? [];
 
-        const mapped: Ujian[] = rawData.map((item: any) => ({
-          ujian_id: item.ujian?.id ?? item.ujian_id,
-          nama: item.ujian?.nama ?? item.ujian?.nama_ujian ?? 'Ujian',
-          durasi: item.ujian?.durasi ?? 0,
-          jumlah_soal: item.ujian?.jumlah_soal ?? 0,
-          status: item.status ?? 'pending',
-          kode_soal: item.ujian?.kode_soal ?? '',
-        }));
+        const mapped: Ujian[] = rawData.map((item: any) => {
+          const ujian = item.ujian || item;
+          return {
+            ujian_id: ujian.id_ujian ?? ujian.id ?? item.ujian_id,
+            nama: ujian.nama_ujian ?? ujian.nama ?? 'Ujian',
+            durasi: ujian.durasi ?? 0,
+            jumlah_soal: ujian.jumlah_soal ?? 0,
+            status: ujian.status ?? 'Tidak Diketahui',
+            kode_soal: ujian.kode_soal ?? '',
+          };
+        });
 
         setUjianList(mapped);
       } catch (error: any) {
@@ -123,26 +126,52 @@ export default function UserDashboardPage() {
               >
                 <div>
                   <h2 className="text-xl font-bold mb-3">{ujian.nama}</h2>
-                  <p className="text-sm text-gray-700">
-                    Waktu : {ujian.durasi} Menit
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Jumlah Soal : {ujian.jumlah_soal}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Status : {ujian.status}
-                  </p>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div className="flex">
+                      <span className="w-25">Waktu</span>
+                      <span>: {ujian.durasi} Menit</span>
+                    </div>
+                    <div className="flex">
+                      <span className="w-25">Jumlah Soal</span>
+                      <span>: {ujian.jumlah_soal}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="w-25">Status Peserta</span>
+                      <span>: Belum Dikerjakan</span>
+                    </div>
+                    <div className="flex mt-5">
+                      <span className="w-25">Status Ujian</span>
+                      <span>
+                        :{' '}
+                        <span
+                          className={`font-semibold ${
+                            ujian.status === 'Aktif'
+                              ? 'text-green-600'
+                              : ujian.status === 'Selesai'
+                              ? 'text-gray-500'
+                              : 'text-red-500'
+                          }`}
+                        >
+                          {ujian.status === 'Selesai' ? 'Berakhir' : ujian.status}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <button
-                  className={`mt-6 py-2 rounded-full text-sm font-semibold transition cursor-pointer ${
-                    ujian.status === 'finished'
-                      ? 'bg-gray-400 text-white cursor-not-allowed'
-                      : 'bg-black text-white hover:bg-gray-800'
+                  className={`mt-6 py-2 rounded-full text-sm font-semibold transition ${
+                    ujian.status === 'Aktif'
+                      ? 'bg-black text-white hover:bg-gray-800'
+                      : 'bg-gray-400 text-white cursor-not-allowed'
                   }`}
-                  disabled={ujian.status === 'finished'}
+                  disabled={ujian.status !== 'Aktif'}
                   onClick={() => handleMulaiClick(ujian)}
                 >
-                  {ujian.status === 'finished' ? 'Selesai' : 'Mulai'}
+                  {ujian.status === 'Aktif'
+                    ? 'Mulai'
+                    : ujian.status === 'Selesai'
+                    ? 'Berakhir'
+                    : 'Tidak Aktif'}
                 </button>
               </div>
             ))}
@@ -168,13 +197,13 @@ export default function UserDashboardPage() {
               )}
               <div className="flex justify-end gap-2 mt-4">
                 <button
-                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-sm cursor-pointer"
+                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-sm"
                   onClick={() => setShowModal(false)}
                 >
                   Batal
                 </button>
                 <button
-                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm cursor-pointer"
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
                   onClick={handleVerifikasiKode}
                 >
                   Verifikasi
