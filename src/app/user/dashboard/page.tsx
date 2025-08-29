@@ -6,12 +6,12 @@ import axios from '@/services/axios';
 import { useRouter } from 'next/navigation';
 
 interface Ujian {
-  id: number;
+  ujian_id: number;
   nama: string;
   durasi: number;
   jumlah_soal: number;
   status: string;
-  kode: string;
+  kode_soal: string;
 }
 
 export default function UserDashboardPage() {
@@ -19,51 +19,65 @@ export default function UserDashboardPage() {
   const [userName, setUserName] = useState('User');
   const [ujianList, setUjianList] = useState<Ujian[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [selectedUjian, setSelectedUjian] = useState<Ujian | null>(null);
   const [kodeInput, setKodeInput] = useState('');
   const [kodeError, setKodeError] = useState('');
 
   useEffect(() => {
-    // Ambil nama depan dari localStorage
     const firstName = localStorage.getItem('first_name');
-    if (firstName) {
-      setUserName(firstName);
-    }
+    if (firstName) setUserName(firstName);
 
     const fetchUjian = async () => {
       try {
-        const response = await axios.get('/ujians');
-        const rawData = response.data?.data;
+        setLoading(true);
+        setErrorMsg(null);
 
-        if (Array.isArray(rawData)) {
-          const mapped = rawData
-            .filter((ujian) => ujian.status === 'Aktif')
-            .map((item) => ({
-              id: item.id_ujian ?? item.id,
-              nama: item.nama_ujian,
-              durasi: parseInt(item.durasi),
-              jumlah_soal: parseInt(item.jumlah_soal),
-              status: item.status,
-              kode: item.kode_soal ?? '', // include kode soal
-            }));
-          setUjianList(mapped);
-        } else {
-          setUjianList([]);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          router.push('/authentication/login');
+          return;
         }
-      } catch (error) {
-        console.error('Gagal memuat data:', error);
-        setUjianList([]);
+
+        const response = await axios.get('/user/ujians', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const rawData = response.data?.data ?? [];
+
+        const mapped: Ujian[] = rawData.map((item: any) => ({
+          ujian_id: item.ujian?.id ?? item.ujian_id,
+          nama: item.ujian?.nama ?? item.ujian?.nama_ujian ?? 'Ujian',
+          durasi: item.ujian?.durasi ?? 0,
+          jumlah_soal: item.ujian?.jumlah_soal ?? 0,
+          status: item.status ?? 'pending',
+          kode_soal: item.ujian?.kode_soal ?? '',
+        }));
+
+        setUjianList(mapped);
+      } catch (error: any) {
+        console.error('Gagal memuat data ujian:', error);
+
+        if (error.response?.status === 401) {
+          router.push('/authentication/login');
+        } else {
+          setErrorMsg(
+            error.response?.data?.message ||
+              `Gagal mengambil data. (${error.response?.status})`
+          );
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchUjian();
-  }, []);
+  }, [router]);
 
   const filteredUjian = ujianList.filter((ujian) =>
     ujian.nama.toLowerCase().includes(searchTerm.toLowerCase())
@@ -75,13 +89,10 @@ export default function UserDashboardPage() {
     setKodeError('');
     setShowModal(true);
   };
-  
-  const handleVerifikasiKode = () => {
-    if (kodeInput === selectedUjian?.kode) {
-      // Simpan ujian_id ke localStorage
-      localStorage.setItem('ujian_id', selectedUjian.id.toString());
 
-      // Redirect ke halaman soal
+  const handleVerifikasiKode = () => {
+    if (kodeInput === selectedUjian?.kode_soal) {
+      localStorage.setItem('ujian_id', selectedUjian.ujian_id.toString());
       router.push('/user/soal');
     } else {
       setKodeError('Kode soal salah. Coba lagi.');
@@ -97,34 +108,48 @@ export default function UserDashboardPage() {
 
         {loading ? (
           <p className="text-center text-gray-600 py-10">Memuat data ujian...</p>
+        ) : errorMsg ? (
+          <div className="text-center text-red-500 py-10">{errorMsg}</div>
         ) : filteredUjian.length === 0 ? (
           <div className="text-center text-gray-500 py-10">
-            Tidak ada ujian aktif ditemukan.
+            Tidak ada ujian yang dibagikan kepada Anda.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredUjian.map((ujian) => (
               <div
-                key={ujian.id}
+                key={ujian.ujian_id}
                 className="bg-white shadow rounded-lg p-6 flex flex-col justify-between border border-gray-200"
               >
                 <div>
                   <h2 className="text-xl font-bold mb-3">{ujian.nama}</h2>
-                  <p className="text-sm text-gray-700">Waktu : {ujian.durasi} Menit</p>
-                  <p className="text-sm text-gray-700">Jumlah Soal : {ujian.jumlah_soal}</p>
+                  <p className="text-sm text-gray-700">
+                    Waktu : {ujian.durasi} Menit
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    Jumlah Soal : {ujian.jumlah_soal}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    Status : {ujian.status}
+                  </p>
                 </div>
                 <button
-                  className="mt-6 bg-black text-white py-2 rounded-full text-sm font-semibold shadow hover:bg-gray-800 transition cursor-pointer"
+                  className={`mt-6 py-2 rounded-full text-sm font-semibold transition cursor-pointer ${
+                    ujian.status === 'finished'
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-black text-white hover:bg-gray-800'
+                  }`}
+                  disabled={ujian.status === 'finished'}
                   onClick={() => handleMulaiClick(ujian)}
                 >
-                  Mulai
+                  {ujian.status === 'finished' ? 'Selesai' : 'Mulai'}
                 </button>
               </div>
             ))}
           </div>
         )}
 
-        {/* MODAL */}
+        {/* Modal */}
         {showModal && selectedUjian && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">

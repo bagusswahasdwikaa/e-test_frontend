@@ -187,14 +187,13 @@ export default function AdminDashboard() {
         <p className="text-red-600">Error: {error}</p>
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow overflow-x-auto">
-            <table className="min-w-full text-sm text-gray-800 table-fixed">
-              <thead className="bg-blue-900 text-white text-center">
+          <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
+              <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
                 <tr>
-                  <th className="px-4 py-3" style={{ width: 70 }}>
-                    <div className="flex justify-center items-center gap-1">
-                      <SortArrow />
-                      No
+                  <th className="px-4 py-3 text-center w-12">
+                    <div className="flex items-center justify-center gap-1">
+                      <SortArrow /> No
                     </div>
                   </th>
                   <th className="px-4 py-3">ID Peserta</th>

@@ -27,6 +27,7 @@ export default function DaftarPesertaPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Fetch Data Peserta
   useEffect(() => {
     async function fetchPeserta() {
       setLoading(true);
@@ -85,10 +86,12 @@ export default function DaftarPesertaPage() {
     fetchPeserta();
   }, [router]);
 
+  // Sorting handler
   const handleToggleSort = () => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   };
 
+  // Filtering data berdasarkan pencarian
   const filteredData = dataPeserta.filter(({ ID_Peserta, Nama_Lengkap, Email }) => {
     const lowerTerm = searchTerm.toLowerCase();
     return (
@@ -98,6 +101,7 @@ export default function DaftarPesertaPage() {
     );
   });
 
+  // Sorting data berdasarkan ID
   const sortedData = React.useMemo(() => {
     return [...filteredData].sort((a, b) => {
       if (a.ID_Peserta < b.ID_Peserta) return sortDirection === 'asc' ? -1 : 1;
@@ -106,22 +110,22 @@ export default function DaftarPesertaPage() {
     });
   }, [filteredData, sortDirection]);
 
-  // Pagination logic: hitung total halaman
+  // Pagination
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const paginatedData = sortedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-  // Ambil data peserta sesuai halaman sekarang
-  const paginatedData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  // Handler untuk pindah halaman sebelumnya
   const goToPreviousPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
 
-  // Handler untuk pindah halaman selanjutnya
   const goToNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
+  // Sort Arrow component
   const SortArrow = () => (
     <button
       onClick={handleToggleSort}
@@ -149,7 +153,7 @@ export default function DaftarPesertaPage() {
     </button>
   );
 
-  // Avatar component dengan fallback SVG jika gagal load
+  // Avatar dengan fallback SVG
   const Avatar = ({ src, alt }: { src?: string | null; alt: string }) => {
     const [imgError, setImgError] = useState(false);
 
@@ -169,6 +173,7 @@ export default function DaftarPesertaPage() {
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
+      {/* Header */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <h1 className="text-2xl font-semibold text-gray-800">Daftar Peserta</h1>
         <button
@@ -190,27 +195,28 @@ export default function DaftarPesertaPage() {
         </button>
       </div>
 
+      {/* Error Message */}
       {error && (
         <div className="mb-4 rounded bg-red-100 p-3 text-red-700 text-sm">
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow min-w-0 w-full overflow-x-auto">
-        <table className="w-full text-sm text-gray-800 border-collapse">
-          <thead className="bg-blue-900 text-white text-center">
-            <tr>
-              <th className="px-4 py-3 whitespace-nowrap" style={{ width: 70 }}>
-                <div className="flex items-center justify-center gap-1">
-                  <SortArrow />
-                  <span>No</span>
-                </div>
-              </th>
+      {/* Table */}
+      <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
+              <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
+                <tr>
+                  <th className="px-4 py-3 text-center w-12">
+                    <div className="flex items-center justify-center gap-1">
+                      <SortArrow /> No
+                    </div>
+                  </th>
               <th className="px-4 py-3 w-24 whitespace-nowrap">ID Peserta</th>
-              <th className="px-4 py-3 w-24">Avatar</th>
+              <th className="px-4 py-3 w-40">Avatar</th>
               <th className="px-4 py-3">Nama Lengkap</th>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3 w-24"style={{ width: 110 }}>Status</th>
+              <th className="px-4 py-3 w-24" style={{ width: 110 }}>Status</th>
               <th className="px-4 py-3 w-40">Aksi</th>
             </tr>
           </thead>
@@ -223,24 +229,42 @@ export default function DaftarPesertaPage() {
               </tr>
             ) : (
               paginatedData.map((peserta, index) => (
-                <tr key={peserta.ID_Peserta} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-2 text-center align-middle">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                <tr
+                  key={peserta.ID_Peserta}
+                  className="border-t hover:bg-gray-50"
+                >
+                  <td className="px-4 py-2 text-center align-middle">
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </td>
                   <td className="px-4 py-2 text-center align-middle whitespace-nowrap">
                     {peserta.ID_Peserta}
                   </td>
                   <td className="px-4 py-2 text-center align-middle">
-                    <Avatar src={peserta.photo_url} alt={`Avatar ${peserta.Nama_Lengkap}`} />
+                    <Avatar
+                      src={peserta.photo_url}
+                      alt={`Avatar ${peserta.Nama_Lengkap}`}
+                    />
                   </td>
                   <td
                     className="px-4 py-2 text-center align-middle"
-                    style={{ maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    style={{
+                      maxWidth: '220px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
                     title={peserta.Nama_Lengkap}
                   >
                     {peserta.Nama_Lengkap}
                   </td>
                   <td
                     className="px-4 py-2 text-center align-middle"
-                    style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    style={{
+                      maxWidth: '280px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
                     title={peserta.Email}
                   >
                     {peserta.Email}
@@ -248,7 +272,9 @@ export default function DaftarPesertaPage() {
                   <td className="px-4 py-2 text-center align-middle">
                     <span
                       className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                        peserta.Status === 'aktif' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                        peserta.Status === 'aktif'
+                          ? 'bg-green-200 text-green-800'
+                          : 'bg-red-200 text-red-800'
                       }`}
                     >
                       {peserta.Status === 'aktif' ? 'Aktif' : 'Tidak Aktif'}
@@ -256,13 +282,17 @@ export default function DaftarPesertaPage() {
                   </td>
                   <td className="px-4 py-2 text-center align-middle space-x-2 whitespace-nowrap">
                     <button
-                      onClick={() => router.push(`/admin/daftarPeserta/lihatPeserta?id=${peserta.ID_Peserta}`)}
+                      onClick={() =>
+                        router.push(`/admin/daftarPeserta/lihatPeserta?id=${peserta.ID_Peserta}`)
+                      }
                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
                     >
                       Lihat
                     </button>
                     <button
-                      onClick={() => router.push(`/admin/daftarPeserta/editPeserta?id=${peserta.ID_Peserta}`)}
+                      onClick={() =>
+                        router.push(`/admin/daftarPeserta/editPeserta?id=${peserta.ID_Peserta}`)
+                      }
                       className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-xs cursor-pointer"
                     >
                       Edit
@@ -279,7 +309,9 @@ export default function DaftarPesertaPage() {
                             .then((res) => {
                               if (!res.ok) throw new Error('Gagal menghapus peserta');
                               alert('Peserta berhasil dihapus.');
-                              setDataPeserta((prev) => prev.filter((p) => p.ID_Peserta !== peserta.ID_Peserta));
+                              setDataPeserta((prev) =>
+                                prev.filter((p) => p.ID_Peserta !== peserta.ID_Peserta)
+                              );
                             })
                             .catch(() => alert('Terjadi kesalahan saat menghapus peserta.'));
                         }
@@ -330,7 +362,7 @@ export default function DaftarPesertaPage() {
   );
 }
 
-// Default user icon (inline SVG)
+// Default user icon (fallback avatar)
 function DefaultUserIcon() {
   return (
     <svg

@@ -55,7 +55,7 @@ export default function AdminSidebar({
   const router = useRouter();
 
   const menuItems = [
-    { label: 'Dashboard', href: '/admin/dashboard', icon: <FiHome /> },
+    { label: 'Beranda', href: '/admin/dashboard', icon: <FiHome /> },
     { label: 'Daftar Ujian', href: '/admin/daftarUjian', icon: <FiList /> },
     { label: 'Daftar Peserta', href: '/admin/daftarPeserta', icon: <FiUsers /> },
     { label: 'Profil', href: '/admin/profil', icon: <FiUser /> },
