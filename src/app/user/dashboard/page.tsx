@@ -12,6 +12,7 @@ interface Ujian {
   jumlah_soal: number;
   status: string; // Diambil dari tabel 'ujians'
   kode_soal: string;
+  status_peserta?: string;
 }
 
 export default function UserDashboardPage() {
@@ -59,6 +60,7 @@ export default function UserDashboardPage() {
             jumlah_soal: ujian.jumlah_soal ?? 0,
             status: ujian.status ?? 'Tidak Diketahui',
             kode_soal: ujian.kode_soal ?? '',
+            status_peserta: item.status_peserta,
           };
         });
 
@@ -96,6 +98,7 @@ export default function UserDashboardPage() {
   const handleVerifikasiKode = () => {
     if (kodeInput === selectedUjian?.kode_soal) {
       localStorage.setItem('ujian_id', selectedUjian.ujian_id.toString());
+      localStorage.setItem('kode_soal', kodeInput); // ⬅️ Simpan kode soal
       router.push('/user/soal');
     } else {
       setKodeError('Kode soal salah. Coba lagi.');
@@ -137,7 +140,18 @@ export default function UserDashboardPage() {
                     </div>
                     <div className="flex">
                       <span className="w-25">Status Peserta</span>
-                      <span>: Belum Dikerjakan</span>
+                      <span>
+                        :{' '}
+                        <span
+                          className={`font-semibold ${
+                            ujian.status_peserta === 'Sudah Dikerjakan'
+                              ? 'text-green-600'
+                              : 'text-yellow-600'
+                          }`}
+                        >
+                          {ujian.status_peserta || 'Belum Dikerjakan'}
+                        </span>
+                      </span>
                     </div>
                     <div className="flex mt-5">
                       <span className="w-25">Status Ujian</span>
@@ -158,16 +172,18 @@ export default function UserDashboardPage() {
                     </div>
                   </div>
                 </div>
-                <button
+               <button
                   className={`mt-6 py-2 rounded-full text-sm font-semibold transition ${
-                    ujian.status === 'Aktif'
+                    ujian.status === 'Aktif' && ujian.status_peserta !== 'Sudah Dikerjakan'
                       ? 'bg-black text-white hover:bg-gray-800'
                       : 'bg-gray-400 text-white cursor-not-allowed'
                   }`}
-                  disabled={ujian.status !== 'Aktif'}
+                  disabled={ !(ujian.status === 'Aktif' && ujian.status_peserta !== 'Sudah Dikerjakan') }
                   onClick={() => handleMulaiClick(ujian)}
                 >
-                  {ujian.status === 'Aktif'
+                  {ujian.status_peserta === 'Sudah Dikerjakan'
+                    ? 'Sudah Dikerjakan'
+                    : ujian.status === 'Aktif'
                     ? 'Mulai'
                     : ujian.status === 'Selesai'
                     ? 'Berakhir'

@@ -1,56 +1,65 @@
 'use client';
 
-import React, { Dispatch, SetStateAction } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import {
-  FiHome,
-  FiFileText,
-  FiBarChart2,
   FiLogOut,
+  FiHome,
+  FiList,
   FiUser,
+  FiBarChart2, 
+  FiFileText,
 } from 'react-icons/fi';
+import { usePathname, useRouter } from 'next/navigation';
+import { Dispatch, SetStateAction } from 'react';
 import { motion } from 'framer-motion';
 
-interface UserSidebarProps {
+interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: Dispatch<SetStateAction<boolean>>;
 }
 
-function Hamburger({ isOpen }: { isOpen: boolean }) {
+function ElegantHamburger({ isOpen }: { isOpen: boolean }) {
+  const commonClasses =
+    'absolute w-6 h-[2px] bg-white rounded transition-all duration-300';
+
   return (
-    <div
-      className="
-        flex flex-col justify-center items-center
-        w-9 h-9 rounded-md
-        transition duration-300
-        hover:bg-gray-700 hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]
-        cursor-pointer
-      "
-      aria-label="Hamburger menu"
+    <button
+      aria-label="Toggle Sidebar"
+      className="relative w-9 h-9 flex items-center justify-center group focus:outline-none transition-transform hover:scale-105 cursor-pointer"
     >
-      {/* Bar 1 */}
-      <span
-        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
-        ${isOpen ? 'rotate-45 translate-y-2' : ''}`}
+      {/* Top Bar */}
+      <motion.span
+        className={commonClasses}
+        animate={{
+          rotate: isOpen ? 45 : 0,
+          y: isOpen ? 6 : -6,
+        }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       />
-      {/* Bar 2 */}
-      <span
-        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
-        ${isOpen ? 'opacity-0' : 'opacity-100'} my-1`}
+      {/* Middle Bar */}
+      <motion.span
+        className={commonClasses}
+        animate={{
+          opacity: isOpen ? 0 : 1,
+        }}
+        transition={{ duration: 0.2 }}
       />
-      {/* Bar 3 */}
-      <span
-        className={`block h-[2px] w-6 bg-white rounded transition-all duration-300 ease-in-out
-        ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}
+      {/* Bottom Bar */}
+      <motion.span
+        className={commonClasses}
+        animate={{
+          rotate: isOpen ? -45 : 0,
+          y: isOpen ? -6 : 6,
+        }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       />
-    </div>
+    </button>
   );
 }
 
 export default function UserSidebar({
   isCollapsed,
   setIsCollapsed,
-}: UserSidebarProps) {
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -81,19 +90,17 @@ export default function UserSidebar({
         className="bg-gradient-to-b from-gray-900 to-gray-800 text-white h-full flex flex-col shadow-lg overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex justify-center py-4">
           {!isCollapsed && (
             <span className="text-xl font-bold tracking-wide select-none">
               Menu
             </span>
           )}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded hover:bg-gray-700 transition cursor-pointer"
-            aria-label="Toggle Sidebar"
-          >
-            <Hamburger isOpen={!isCollapsed} />
-          </button>
+          {isCollapsed && (
+            <div onClick={() => setIsCollapsed(false)}>
+              <ElegantHamburger isOpen={false} />
+            </div>
+          )}
         </div>
 
         <div className="border-b border-gray-700 mx-2 mt-[-12]" />
@@ -141,7 +148,6 @@ export default function UserSidebar({
             <button
               onClick={handleLogout}
               className="flex items-center justify-center gap-2 w-full py-2 rounded-md font-semibold text-white bg-red-600 hover:bg-red-700 transition cursor-pointer"
-              title={isCollapsed ? 'Keluar' : ''}
             >
               <FiLogOut />
               {!isCollapsed && (
