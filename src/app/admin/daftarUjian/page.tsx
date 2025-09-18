@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
-import { ShareIcon, PencilSquareIcon, TrashIcon, EyeIcon, DocumentDuplicateIcon  } from '@heroicons/react/24/outline';
+import { ShareIcon, PencilSquareIcon, TrashIcon, EyeIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
 
 interface Ujian {
@@ -30,7 +30,6 @@ interface PesertaList {
   sudah: Peserta[];
 }
 
-
 type SortDirection = 'asc' | 'desc';
 
 export default function DaftarUjianPage() {
@@ -52,6 +51,12 @@ export default function DaftarUjianPage() {
   const [selectedUjian, setSelectedUjian] = useState<Ujian | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // === STATE UNTUK KLONING ===
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [selectedCloneId, setSelectedCloneId] = useState<number | ''>('');
+  const [kodeSoalBaru, setKodeSoalBaru] = useState('');
+  const [loadingClone, setLoadingClone] = useState(false);
+
   const formatTanggal = (tanggal: string) => {
     if (!tanggal) return '-';
     const d = new Date(tanggal);
@@ -72,38 +77,41 @@ export default function DaftarUjianPage() {
     return now >= mulaiTime && now <= akhirTime ? 'Aktif' : 'Non Aktif';
   };
 
-  useEffect(() => {
+  // --- fungsi load ulang daftar ujian (dipakai ulang) ---
+  const fetchUjians = async () => {
     setLoading(true);
-    fetch('http://localhost:8000/api/ujians')
-      .then(async (res) => {
-        const contentType = res.headers.get('Content-Type');
-        if (!res.ok || !contentType?.includes('application/json')) {
-          throw new Error('API response is not JSON.');
-        }
-        return res.json();
-      })
-      .then((resJson) => {
-        if (Array.isArray(resJson.data)) {
-          const mapped = resJson.data.map((item: any): Ujian => ({
-            id: item.id_ujian,
-            nama: item.nama_ujian,
-            tanggal_mulai: item.tanggal_mulai,
-            tanggal_akhir: item.tanggal_akhir,
-            durasi: Number(item.durasi) || 0,
-            status: hitungStatus(item.tanggal_mulai, item.tanggal_akhir),
-            kode: item.kode_soal,
-            jumlahSoal: Number(item.jumlah_soal) || 0,
-          }));
-          setDataUjian(mapped);
-        } else {
-          throw new Error('Data format tidak valid.');
-        }
-      })
-      .catch((err) => {
-        console.error('Gagal memuat ujian:', err);
-        alert('Gagal memuat daftar ujian.');
-      })
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch('http://localhost:8000/api/ujians');
+      const contentType = res.headers.get('Content-Type');
+      if (!res.ok || !contentType?.includes('application/json')) {
+        throw new Error('API response is not JSON or not OK.');
+      }
+      const resJson = await res.json();
+      if (Array.isArray(resJson.data)) {
+        const mapped = resJson.data.map((item: any): Ujian => ({
+          id: item.id_ujian,
+          nama: item.nama_ujian,
+          tanggal_mulai: item.tanggal_mulai,
+          tanggal_akhir: item.tanggal_akhir,
+          durasi: Number(item.durasi) || 0,
+          status: hitungStatus(item.tanggal_mulai, item.tanggal_akhir),
+          kode: item.kode_soal,
+          jumlahSoal: Number(item.jumlah_soal) || 0,
+        }));
+        setDataUjian(mapped);
+      } else {
+        throw new Error('Data format tidak valid.');
+      }
+    } catch (err) {
+      console.error('Gagal memuat ujian:', err);
+      alert('Gagal memuat daftar ujian. ' + (err instanceof Error ? err.message : ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUjians();
   }, []);
 
   useEffect(() => {
@@ -134,7 +142,6 @@ export default function DaftarUjianPage() {
 
   const pesertaBelumFiltered = filterPeserta(pesertaList.belum);
   const pesertaSudahFiltered = filterPeserta(pesertaList.sudah);
-
 
   const sortedData = React.useMemo(() => {
     return [...filteredData].sort((a, b) => {
@@ -167,6 +174,77 @@ export default function DaftarUjianPage() {
     }
   };
 
+  // ================== FUNGSI KLONING ==================
+  const openCloneModal = () => {
+    setSelectedCloneId(''); // reset
+    setKodeSoalBaru('');
+    setShowCloneModal(true);
+  };
+
+  const handleClone = async () => {
+    if (!selectedCloneId) {
+      alert('Silakan pilih ujian yang ingin dikloning.');
+      return;
+    }
+    if (!kodeSoalBaru.trim()) {
+      alert('Silakan isi kode soal baru.');
+      return;
+    }
+
+    setLoadingClone(true);
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/ujians/${selectedCloneId}/clone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+          // Jika API menggunakan Bearer token, tambahkan:
+          // 'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ kode_soal: kodeSoalBaru.trim() }),
+      });
+
+      // baca body (bisa JSON atau teks)
+      const text = await res.text();
+      let data: any = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = text;
+      }
+
+      if (!res.ok) {
+        // try tampung pesan error dari response JSON
+        const msg = data?.message || (typeof data === 'string' ? data : 'Gagal mengkloning ujian.');
+        throw new Error(msg);
+      }
+
+      // sukses
+      alert('Ujian berhasil dikloning.');
+      setShowCloneModal(false);
+      setKodeSoalBaru('');
+      setSelectedCloneId('');
+      // reload daftar ujian
+      await fetchUjians();
+    } catch (err: any) {
+      console.error('Terjadi kesalahan saat kloning:', err);
+      const msg = err?.message || String(err);
+      alert(`Terjadi kesalahan saat kloning: ${msg}`);
+
+      // jika error adalah "Failed to fetch", beri petunjuk debug
+      if (msg === 'Failed to fetch') {
+        alert(
+          'Catatan: "Failed to fetch" sering berarti backend tidak dapat dijangkau atau ada masalah CORS. ' +
+          'Periksa bahwa backend berjalan di http://localhost:8000 dan konfigurasi CORS pada Laravel (config/cors.php) mengizinkan origin frontend.'
+        );
+      }
+    } finally {
+      setLoadingClone(false);
+    }
+  };
+  // ====================================================
+
   const openBagikanModal = async (ujian: Ujian) => {
     try {
       // Ambil semua peserta
@@ -196,7 +274,7 @@ export default function DaftarUjianPage() {
         ID_Peserta: p.id,
         Nama_Lengkap: p.name,
         Email: p.email,
-        Status: 'aktif', // asumsi sudah aktif kalau bisa dikerjakan
+        Status: 'aktif',
         photo_url: null,
       }));
 
@@ -269,25 +347,12 @@ export default function DaftarUjianPage() {
 
         {/* Tombol-tombol */}
         <div className="flex flex-wrap gap-2">
-          {/* Tombol Kloning */}
+          {/* Tombol Kloning (DI LUAR TABEL) */}
           <button
-            onClick={() => alert('Fungsi kloning akan ditambahkan di sini')}
+            onClick={openCloneModal}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-2 10h2a2 2 0 002-2v-8a2 2 0 00-2-2h-2m-8 0v10a2 2 0 002 2h4"
-              />
-            </svg>
+            <DocumentDuplicateIcon className="w-5 h-5" />
             Kloning
           </button>
 
@@ -528,6 +593,56 @@ export default function DaftarUjianPage() {
                 }`}
               >
                 Bagikan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Kloning */}
+      {showCloneModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h2 className="text-lg font-bold mb-4">Kloning Ujian</h2>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pilih Ujian</label>
+            <select
+              value={selectedCloneId}
+              onChange={(e) => setSelectedCloneId(e.target.value ? Number(e.target.value) : '')}
+              className="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            >
+              <option value="">-- Pilih ujian --</option>
+              {dataUjian.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nama} ({u.kode})
+                </option>
+              ))}
+            </select>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Kode Soal Baru</label>
+            <input
+              type="text"
+              value={kodeSoalBaru}
+              onChange={(e) => setKodeSoalBaru(e.target.value)}
+              placeholder="Masukkan kode soal baru"
+              className="w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            />
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowCloneModal(false)}
+                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleClone}
+                disabled={loadingClone}
+                className={`px-4 py-2 rounded text-white transition cursor-pointer ${
+                  loadingClone ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                {loadingClone ? 'Mengkloning...' : 'Kloning'}
               </button>
             </div>
           </div>

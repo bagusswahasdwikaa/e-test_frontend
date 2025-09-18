@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import UserLayout from '@/components/UserLayout';
 import axios from '@/services/axios';
 import { useRouter } from 'next/navigation';
@@ -10,9 +10,9 @@ interface Ujian {
   nama: string;
   durasi: number;
   jumlah_soal: number;
-  status: string; // Diambil dari tabel 'ujians'
+  status: string;
   kode_soal: string;
-  status_peserta?: string;
+  status_peserta: string;
 }
 
 export default function UserDashboardPage() {
@@ -28,61 +28,70 @@ export default function UserDashboardPage() {
   const [kodeInput, setKodeInput] = useState('');
   const [kodeError, setKodeError] = useState('');
 
+  // 🔄 Buat fungsi fetch agar bisa dipanggil ulang
+  const fetchUjian = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/authentication/login');
+        return;
+      }
+
+      const response = await axios.get('/user/ujians', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const rawData = response.data?.data ?? [];
+      const mapped: Ujian[] = rawData.map((item: any) => {
+        const ujian = item.ujian || item;
+        return {
+          ujian_id: ujian.id_ujian ?? ujian.id ?? item.ujian_id,
+          nama: ujian.nama_ujian ?? ujian.nama ?? 'Ujian',
+          durasi: ujian.durasi ?? 0,
+          jumlah_soal: ujian.jumlah_soal ?? 0,
+          status: ujian.status ?? 'Tidak Diketahui',
+          kode_soal: ujian.kode_soal ?? '',
+          status_peserta: item.status_peserta,
+        };
+      });
+
+      setUjianList(mapped);
+    } catch (error: any) {
+      console.error('Gagal memuat data ujian:', error);
+      if (error.response?.status === 401) {
+        router.push('/authentication/login');
+      } else {
+        setErrorMsg(
+          error.response?.data?.message ||
+            `Gagal mengambil data. (${error.response?.status})`
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     const firstName = localStorage.getItem('first_name');
     if (firstName) setUserName(firstName);
 
-    const fetchUjian = async () => {
-      try {
-        setLoading(true);
-        setErrorMsg(null);
+    fetchUjian();
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/authentication/login');
-          return;
-        }
-
-        const response = await axios.get('/user/ujians', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const rawData = response.data?.data ?? [];
-
-        const mapped: Ujian[] = rawData.map((item: any) => {
-          const ujian = item.ujian || item;
-          return {
-            ujian_id: ujian.id_ujian ?? ujian.id ?? item.ujian_id,
-            nama: ujian.nama_ujian ?? ujian.nama ?? 'Ujian',
-            durasi: ujian.durasi ?? 0,
-            jumlah_soal: ujian.jumlah_soal ?? 0,
-            status: ujian.status ?? 'Tidak Diketahui',
-            kode_soal: ujian.kode_soal ?? '',
-            status_peserta: item.status_peserta,
-          };
-        });
-
-        setUjianList(mapped);
-      } catch (error: any) {
-        console.error('Gagal memuat data ujian:', error);
-
-        if (error.response?.status === 401) {
-          router.push('/authentication/login');
-        } else {
-          setErrorMsg(
-            error.response?.data?.message ||
-              `Gagal mengambil data. (${error.response?.status})`
-          );
-        }
-      } finally {
-        setLoading(false);
+    // 👂 Dengarkan event perubahan localStorage
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (e.key === 'ujian_submitted') {
+        fetchUjian(); // refresh list ujian
+        localStorage.removeItem('ujian_submitted'); // bersihkan flag
       }
     };
-
-    fetchUjian();
-  }, [router]);
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => window.removeEventListener('storage', handleStorageUpdate);
+  }, [fetchUjian]);
 
   const filteredUjian = ujianList.filter((ujian) =>
     ujian.nama.toLowerCase().includes(searchTerm.toLowerCase())
@@ -98,7 +107,11 @@ export default function UserDashboardPage() {
   const handleVerifikasiKode = () => {
     if (kodeInput === selectedUjian?.kode_soal) {
       localStorage.setItem('ujian_id', selectedUjian.ujian_id.toString());
-      localStorage.setItem('kode_soal', kodeInput); // ⬅️ Simpan kode soal
+      localStorage.setItem('kode_soal', kodeInput);
+
+      // 🟢 pasang flag supaya dashboard reload setelah submit
+      localStorage.setItem('ujian_submitted', 'pending');
+
       router.push('/user/soal');
     } else {
       setKodeError('Kode soal salah. Coba lagi.');
@@ -122,79 +135,91 @@ export default function UserDashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredUjian.map((ujian) => (
-              <div
-                key={ujian.ujian_id}
-                className="bg-white shadow rounded-lg p-6 flex flex-col justify-between border border-gray-200"
-              >
-                <div>
-                  <h2 className="text-xl font-bold mb-3">{ujian.nama}</h2>
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <div className="flex">
-                      <span className="w-25">Waktu</span>
-                      <span>: {ujian.durasi} Menit</span>
-                    </div>
-                    <div className="flex">
-                      <span className="w-25">Jumlah Soal</span>
-                      <span>: {ujian.jumlah_soal}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="w-25">Status Peserta</span>
-                      <span>
-                        :{' '}
-                        <span
-                          className={`font-semibold ${
-                            ujian.status_peserta === 'Sudah Dikerjakan'
-                              ? 'text-green-600'
-                              : 'text-yellow-600'
-                          }`}
-                        >
-                          {ujian.status_peserta || 'Belum Dikerjakan'}
+            {filteredUjian.map((ujian) => {
+              const statusPeserta = ujian.status_peserta || 'Belum Dikerjakan';
+              const statusPesertaColor =
+                statusPeserta === 'Sudah Dikerjakan'
+                  ? 'text-blue-600'
+                  : 'text-red-600';
+
+              return (
+                <div
+                  key={ujian.ujian_id}
+                  className="bg-white shadow rounded-lg p-6 flex flex-col justify-between border border-gray-200"
+                >
+                  <div>
+                    <h2 className="text-xl font-bold mb-3">{ujian.nama}</h2>
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <div className="flex">
+                        <span className="w-25">Waktu</span>
+                        <span>: {ujian.durasi} Menit</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-25">Jumlah Soal</span>
+                        <span>: {ujian.jumlah_soal}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-25">Status Peserta</span>
+                        <span>
+                          :{' '}
+                          <span
+                            className={`font-semibold ${statusPesertaColor}`}
+                          >
+                            {statusPeserta}
+                          </span>
                         </span>
-                      </span>
-                    </div>
-                    <div className="flex mt-5">
-                      <span className="w-25">Status Ujian</span>
-                      <span>
-                        :{' '}
-                        <span
-                          className={`font-semibold ${
-                            ujian.status === 'Aktif'
-                              ? 'text-green-600'
-                              : ujian.status === 'Selesai'
-                              ? 'text-gray-500'
-                              : 'text-red-500'
-                          }`}
-                        >
-                          {ujian.status === 'Selesai' ? 'Berakhir' : ujian.status}
+                      </div>
+                      <div className="flex mt-5">
+                        <span className="w-25">Status Ujian</span>
+                        <span>
+                          :{' '}
+                          <span
+                            className={`font-semibold ${
+                              ujian.status === 'Aktif'
+                                ? 'text-green-600'
+                                : ujian.status === 'Selesai'
+                                ? 'text-gray-500'
+                                : 'text-red-500'
+                            }`}
+                          >
+                            {ujian.status === 'Selesai'
+                              ? 'Berakhir'
+                              : ujian.status}
+                          </span>
                         </span>
-                      </span>
+                      </div>
                     </div>
                   </div>
+                  <button
+                    className={`mt-6 py-2 rounded-full text-sm font-semibold transition ${
+                      ujian.status === 'Aktif' &&
+                      statusPeserta !== 'Sudah Dikerjakan'
+                        ? 'bg-black text-white hover:bg-gray-800'
+                        : 'bg-gray-400 text-white cursor-not-allowed'
+                    }`}
+                    disabled={
+                      !(
+                        ujian.status === 'Aktif' &&
+                        statusPeserta !== 'Sudah Dikerjakan'
+                      )
+                    }
+                    onClick={() => handleMulaiClick(ujian)}
+                  >
+                    {statusPeserta === 'Sudah Dikerjakan'
+                      ? 'Sudah Dikerjakan'
+                      : ujian.status === 'Aktif'
+                      ? 'Mulai'
+                      : ujian.status === 'Selesai'
+                      ? 'Berakhir'
+                      : 'Tidak Aktif'}
+                  </button>
                 </div>
-               <button
-                  className={`mt-6 py-2 rounded-full text-sm font-semibold transition ${
-                    ujian.status === 'Aktif' && ujian.status_peserta !== 'Sudah Dikerjakan'
-                      ? 'bg-black text-white hover:bg-gray-800'
-                      : 'bg-gray-400 text-white cursor-not-allowed'
-                  }`}
-                  disabled={ !(ujian.status === 'Aktif' && ujian.status_peserta !== 'Sudah Dikerjakan') }
-                  onClick={() => handleMulaiClick(ujian)}
-                >
-                  {ujian.status_peserta === 'Sudah Dikerjakan'
-                    ? 'Sudah Dikerjakan'
-                    : ujian.status === 'Aktif'
-                    ? 'Mulai'
-                    : ujian.status === 'Selesai'
-                    ? 'Berakhir'
-                    : 'Tidak Aktif'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Modal */}
+        {/* Modal Verifikasi Kode */}
         {showModal && selectedUjian && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">

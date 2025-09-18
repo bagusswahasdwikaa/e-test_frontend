@@ -1,34 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import axios from '@/services/axios';
+import React, { useEffect, useState } from 'react';
 import UserLayout from '@/components/UserLayout';
-import { useRouter } from 'next/navigation';
+import axios from '@/services/axios'; // pastikan axios sudah dikonfigurasi
 
 interface RingkasanHasil {
-  id: number;
-  nama: string;
-  submitted_at: string;
-  nilai: number;
-  status: 'Sudah Dikerjakan' | 'Belum Dikerjakan';
-}
-
-interface DetailHasil {
-  soal_id: number;
-  pertanyaan: string;
-  jawaban_peserta: string;
-  jawaban_benar: string | null;
-  is_correct: boolean;
+  nama_ujian: string;
+  hasil: {
+    nilai: number;
+    status: string;
+    waktu_selesai: string | null; // format 'd-m-Y H:i:s'
+  } | null;
 }
 
 export default function HasilPage() {
   const [hasilList, setHasilList] = useState<RingkasanHasil[]>([]);
-  const [detail, setDetail] = useState<DetailHasil[] | null>(null);
-  const [selectedUjian, setSelectedUjian] = useState<RingkasanHasil | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const router = useRouter();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     async function fetchHasil() {
@@ -38,160 +29,142 @@ export default function HasilPage() {
         setLoading(false);
         return;
       }
-
       try {
-        const res = await axios.get('/user/ujians/hasil', {
+        const res = await axios.get('/hasil-ujian', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setHasilList(res.data.data || []);
       } catch (err: any) {
-        console.error('Gagal memuat hasil ujian:', err);
-        setErrorMsg('Terjadi kesalahan saat memuat hasil ujian.');
+        setErrorMsg('Gagal memuat hasil ujian.');
       } finally {
         setLoading(false);
       }
     }
-
     fetchHasil();
   }, []);
 
-  const formatDateTime = (iso: string) => {
-    const d = new Date(iso);
+  // parsing tanggal backend format d-m-Y H:i:s ke Date
+  function parseBackendDate(dateStr: string | null): Date | null {
+    if (!dateStr) return null;
+    const [datePart, timePart] = dateStr.split(' ');
+    if (!datePart || !timePart) return null;
+    const [day, month, year] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
+    if ([day, month, year, hour, minute, second].some(isNaN)) return null;
+    return new Date(year, month - 1, day, hour, minute, second);
+  }
+
+  const formatDateTime = (dateStr: string | null) => {
+    const d = parseBackendDate(dateStr);
+    if (!d) return '-';
     return d.toLocaleString('id-ID', {
       dateStyle: 'medium',
       timeStyle: 'short',
     });
   };
 
-  const lihatDetail = async (ujian: RingkasanHasil) => {
-    setSelectedUjian(ujian);
-    setDetailLoading(true);
-    setErrorMsg(null);
+  // Pagination tanpa filter dan sorting
+  const totalPages = Math.ceil(hasilList.length / itemsPerPage);
+  const paginatedData = hasilList.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setErrorMsg('Token tidak ditemukan.');
-      setDetailLoading(false);
-      return;
-    }
-
-    try {
-      const res = await axios.get(`/user/ujians/${ujian.id}/hasil`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setDetail(res.data.detail_jawaban);
-    } catch (err: any) {
-      console.error('Gagal memuat detail hasil:', err);
-      setErrorMsg('Gagal memuat detail hasil ujian.');
-    } finally {
-      setDetailLoading(false);
-    }
-  };
+  const goToPreviousPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const goToNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   return (
     <UserLayout>
       <main className="p-6 bg-gray-100 min-h-screen">
-        <h1 className="text-2xl font-bold mb-6">Hasil Ujian</h1>
+        <h1 className="text-2xl font-semibold mb-6">Hasil Ujian</h1>
 
         {loading ? (
-          <p>Memuat hasil ujian...</p>
+          <p className="text-gray-600">Memuat hasil ujian...</p>
         ) : errorMsg ? (
-          <p className="text-red-500">{errorMsg}</p>
+          <p className="text-red-600">{errorMsg}</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full bg-white rounded shadow-md">
-                <thead className="bg-blue-800 text-white">
+            <div className="overflow-x-auto bg-white shadow rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm table-fixed">
+                <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
                   <tr>
-                    <th className="px-4 py-2">ID Ujian</th>
-                    <th className="px-4 py-2">Nama Ujian</th>
-                    <th className="px-4 py-2">Waktu Selesai</th>
-                    <th className="px-4 py-2">Nilai</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Aksi</th>
+                    <th className="px-4 py-3 text-center w-12">No</th>
+                    <th className="px-4 py-3">Nama Ujian</th>
+                    <th className="px-4 py-3">Waktu Selesai</th>
+                    <th className="px-4 py-3 text-center">Nilai</th>
+                    <th className="px-4 py-3 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {hasilList.map((h) => (
-                    <tr key={h.id} className="border-b">
-                      <td className="px-4 py-2">{h.id}</td>
-                      <td className="px-4 py-2">{h.nama}</td>
-                      <td className="px-4 py-2">
-                        {h.submitted_at ? formatDateTime(h.submitted_at) : '-'}
-                      </td>
-                      <td className="px-4 py-2">{h.nilai}</td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`px-2 py-1 rounded text-sm font-semibold ${
-                            h.status === 'Sudah Dikerjakan'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {h.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <button
-                          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
-                          onClick={() => lihatDetail(h)}
-                          disabled={h.status !== 'Sudah Dikerjakan'}
-                        >
-                          Lihat
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {hasilList.length === 0 && (
+                  {paginatedData.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-4">
-                        Belum ada ujian yang diselesaikan.
+                      <td colSpan={5} className="text-center py-4 text-gray-500">
+                        Data tidak ditemukan
                       </td>
                     </tr>
+                  ) : (
+                    paginatedData.map((item, idx) => {
+                      const status = item.hasil?.status || 'Belum Dikerjakan';
+                      const statusColor =
+                        status === 'Sudah Dikerjakan'
+                          ? 'bg-green-200 text-green-800'
+                          : status === 'Belum Dikerjakan'
+                          ? 'bg-red-200 text-red-800'
+                          : 'bg-green-200 text-green-800';
+                      return (
+                        <tr
+                          key={`${item.nama_ujian}-${idx}`}
+                          className="border-t hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-2 text-center">
+                            {(currentPage - 1) * itemsPerPage + idx + 1}
+                          </td>
+                          <td className="px-4 py-2 text-center">{item.nama_ujian}</td>
+                          <td className="px-4 py-2 text-center">{formatDateTime(item.hasil?.waktu_selesai || null)}</td>
+                          <td className="px-4 py-2 text-center">{item.hasil?.nilai ?? '-'}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span
+                              className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${statusColor}`}
+                            >
+                              {status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
 
-            {/* Detail Hasil */}
-            {selectedUjian && selectedUjian.status === 'Sudah Dikerjakan' && (
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">
-                  Detail Jawaban: {selectedUjian.nama}
-                </h2>
-                {detailLoading ? (
-                  <p>Memuat detail hasil...</p>
-                ) : detail && detail.length > 0 ? (
-                  <div className="space-y-4">
-                    {detail.map((d) => (
-                      <div
-                        key={d.soal_id}
-                        className={`p-4 border rounded ${
-                          d.is_correct
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-red-500 bg-red-50'
-                        }`}
-                      >
-                        <p>
-                          <strong>Pertanyaan:</strong> {d.pertanyaan}
-                        </p>
-                        <p>
-                          <strong>Jawaban Anda:</strong> {d.jawaban_peserta}
-                        </p>
-                        <p>
-                          <strong>Jawaban Benar:</strong> {d.jawaban_benar || '-'}
-                        </p>
-                        <p>
-                          <strong>Status:</strong> {d.is_correct ? 'Benar' : 'Salah'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">Belum ada detail hasil tersedia.</p>
-                )}
-              </div>
-            )}
+            {/* Pagination */}
+            <div className="flex justify-between items-center px-2 py-4 text-sm text-gray-600 mt-3">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`${
+                  currentPage === 1
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                } px-3 py-1 rounded`}
+              >
+                Sebelumnya
+              </button>
+              <span>
+                Halaman {currentPage} dari {totalPages || 1}
+              </span>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`${
+                  currentPage === totalPages || totalPages === 0
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                } px-3 py-1 rounded`}
+              >
+                Selanjutnya
+              </button>
+            </div>
           </>
         )}
       </main>
