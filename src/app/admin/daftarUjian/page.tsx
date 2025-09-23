@@ -38,6 +38,7 @@ export default function DaftarUjianPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchPeserta, setSearchPeserta] = useState('');
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false); // loading saat aksi (hapus/edit)
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -161,16 +162,38 @@ export default function DaftarUjianPage() {
   const goToPrevious = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const goToNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Hapus ujian ini?')) return;
+  const handleDelete = (ujianId: number) => {
+    // Find the ujian to delete
+    const ujianToDelete = dataUjian.find(u => u.id === ujianId);
+    if (!ujianToDelete) return;
+
+    setSelectedUjian(ujianToDelete);
+    setShowModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedUjian) return;
+    setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/ujians/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Gagal menghapus.');
-      setDataUjian((prev) => prev.filter((u) => u.id !== id));
-      alert('Ujian dihapus.');
+      const res = await fetch(`http://localhost:8000/api/ujians/${selectedUjian.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Gagal menghapus ujian');
+
+      setDataUjian((prev) =>
+        prev.filter((p) => p.id !== selectedUjian.id)
+      );
+
+      setShowModal(false);
+      setSelectedUjian(null);
     } catch (err) {
-      console.error(err);
-      alert('Gagal hapus ujian.');
+      alert('Terjadi kesalahan saat menghapus ujian.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -341,6 +364,11 @@ export default function DaftarUjianPage() {
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-white border-solid"></div>
+        </div>
+      )}
       <div className="mb-6">
         {/* Judul */}
         <h1 className="text-2xl font-bold mb-2">Daftar Ujian</h1>
@@ -454,7 +482,10 @@ export default function DaftarUjianPage() {
 
                           {/* Hapus Ujian */}
                           <button
-                            onClick={() => handleDelete(u.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDelete(u.id);
+                            }}
                             className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition cursor-pointer"
                             title="Hapus Ujian"
                           >
@@ -643,6 +674,34 @@ export default function DaftarUjianPage() {
                 }`}
               >
                 {loadingClone ? 'Mengkloning...' : 'Kloning'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Konfirmasi Hapus */}
+      {showModal && selectedUjian && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+            <h2 className="text-lg font-semibold text-gray-800 mb-3">
+              Konfirmasi Hapus
+            </h2>
+            <p className="text-sm text-gray-600 mb-5">
+              Apakah Anda yakin ingin menghapus ujian{' '}
+              <span className="font-bold">{selectedUjian.nama}</span>?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer"
+              >
+                Hapus
               </button>
             </div>
           </div>

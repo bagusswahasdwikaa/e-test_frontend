@@ -25,9 +25,14 @@ export default function DaftarPesertaPage() {
 
   const [dataPeserta, setDataPeserta] = useState<Peserta[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // loading fetch awal
+  const [actionLoading, setActionLoading] = useState(false); // loading saat aksi (hapus/edit)
   const [error, setError] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPeserta, setSelectedPeserta] = useState<Peserta | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -131,33 +136,32 @@ export default function DaftarPesertaPage() {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
-  // Sort Arrow component
-  const SortArrow = () => (
-    <button
-      onClick={handleToggleSort}
-      aria-label="Toggle sort nomor peserta"
-      className="select-none"
-      style={{
-        fontSize: 12,
-        userSelect: 'none',
-        lineHeight: 1,
-        padding: 0,
-        border: 'none',
-        background: 'none',
-        cursor: 'pointer',
-        color: '#E5E7EB',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 14,
-        height: 14,
-        margin: 0,
-      }}
-      type="button"
-    >
-      {sortDirection === 'asc' ? '▲' : '▼'}
-    </button>
-  );
+  // Hapus peserta
+  const handleDelete = async () => {
+    if (!selectedPeserta) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/peserta/${selectedPeserta.ID_Peserta}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Gagal menghapus peserta');
+
+      setDataPeserta((prev) =>
+        prev.filter((p) => p.ID_Peserta !== selectedPeserta.ID_Peserta)
+      );
+
+      setShowModal(false);
+      setSelectedPeserta(null);
+    } catch (err) {
+      alert('Terjadi kesalahan saat menghapus peserta.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Avatar dengan fallback SVG
   const Avatar = ({ src, alt }: { src?: string | null; alt: string }) => {
@@ -179,12 +183,17 @@ export default function DaftarPesertaPage() {
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
+      {/* Overlay Loading */}
+      {(loading || actionLoading) && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-white border-solid"></div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
-        {/* Judul */}
         <h1 className="text-2xl font-semibold text-gray-800 mb-2">Daftar Peserta</h1>
 
-        {/* Tombol Tambah Data */}
         <div>
           <button
             onClick={() => router.push('/admin/daftarPeserta/tambahPeserta')}
@@ -215,14 +224,14 @@ export default function DaftarPesertaPage() {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
-              <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
-                <tr>
-                  <th className="px-4 py-3 text-center w-12">
-                    <div className="flex items-center justify-center gap-1">
-                      <SortArrow /> No
-                    </div>
-                  </th>
+        <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
+          <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
+            <tr>
+              <th className="px-4 py-3 text-center w-12">
+                <div className="flex items-center justify-center gap-1">
+                  <SortArrow /> No
+                </div>
+              </th>
               <th className="px-4 py-3 w-24 whitespace-nowrap">ID Peserta</th>
               <th className="px-4 py-3 w-40">Avatar</th>
               <th className="px-4 py-3">Nama Lengkap</th>
@@ -240,10 +249,7 @@ export default function DaftarPesertaPage() {
               </tr>
             ) : (
               paginatedData.map((peserta, index) => (
-                <tr
-                  key={peserta.ID_Peserta}
-                  className="border-t hover:bg-gray-50"
-                >
+                <tr key={peserta.ID_Peserta} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-2 text-center align-middle">
                     {(currentPage - 1) * itemsPerPage + index + 1}
                   </td>
@@ -256,28 +262,10 @@ export default function DaftarPesertaPage() {
                       alt={`Avatar ${peserta.Nama_Lengkap}`}
                     />
                   </td>
-                  <td
-                    className="px-4 py-2 text-center align-middle"
-                    style={{
-                      maxWidth: '220px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                    title={peserta.Nama_Lengkap}
-                  >
+                  <td className="px-4 py-2 text-center align-middle truncate max-w-xs" title={peserta.Nama_Lengkap}>
                     {peserta.Nama_Lengkap}
                   </td>
-                  <td
-                    className="px-4 py-2 text-center align-middle"
-                    style={{
-                      maxWidth: '280px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                    title={peserta.Email}
-                  >
+                  <td className="px-4 py-2 text-center align-middle truncate max-w-xs" title={peserta.Email}>
                     {peserta.Email}
                   </td>
                   <td className="px-4 py-2 text-center align-middle">
@@ -318,22 +306,8 @@ export default function DaftarPesertaPage() {
                       {/* Hapus */}
                       <button
                         onClick={() => {
-                          if (confirm('Yakin ingin menghapus peserta ini?')) {
-                            fetch(`http://localhost:8000/api/peserta/${peserta.ID_Peserta}`, {
-                              method: 'DELETE',
-                              headers: {
-                                Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
-                              },
-                            })
-                              .then((res) => {
-                                if (!res.ok) throw new Error('Gagal menghapus peserta');
-                                alert('Peserta berhasil dihapus.');
-                                setDataPeserta((prev) =>
-                                  prev.filter((p) => p.ID_Peserta !== peserta.ID_Peserta)
-                                );
-                              })
-                              .catch(() => alert('Terjadi kesalahan saat menghapus peserta.'));
-                          }
+                          setSelectedPeserta(peserta);
+                          setShowModal(true);
                         }}
                         className="bg-red-600 hover:bg-red-700 p-2 rounded-md transition cursor-pointer"
                         title="Hapus"
@@ -379,6 +353,35 @@ export default function DaftarPesertaPage() {
           Selanjutnya
         </button>
       </div>
+
+      {/* Modal Konfirmasi Hapus */}
+      {showModal && selectedPeserta && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+            <h2 className="text-lg font-semibold text-gray-800 mb-3">
+              Konfirmasi Hapus
+            </h2>
+            <p className="text-sm text-gray-600 mb-5">
+              Apakah Anda yakin ingin menghapus peserta{' '}
+              <span className="font-bold">{selectedPeserta.Nama_Lengkap}</span>?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
@@ -398,5 +401,36 @@ function DefaultUserIcon() {
         clipRule="evenodd"
       />
     </svg>
+  );
+}
+
+// Sort Arrow component
+function SortArrow({}: {}) {
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  return (
+    <button
+      onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+      aria-label="Toggle sort nomor peserta"
+      className="select-none"
+      style={{
+        fontSize: 12,
+        userSelect: 'none',
+        lineHeight: 1,
+        padding: 0,
+        border: 'none',
+        background: 'none',
+        cursor: 'pointer',
+        color: '#E5E7EB',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 14,
+        height: 14,
+        margin: 0,
+      }}
+      type="button"
+    >
+      {sortDirection === 'asc' ? '▲' : '▼'}
+    </button>
   );
 }

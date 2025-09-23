@@ -182,16 +182,21 @@ export default function AdminProfilPage() {
     window.location.reload();
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="p-6 text-center text-gray-600">Memuat profil...</div>
-      </AdminLayout>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <AdminLayout>
+  //       <div className="p-6 text-center text-gray-600">Memuat profil...</div>
+  //     </AdminLayout>
+  //   );
+  // }
 
   return (
     <AdminLayout>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-white border-solid"></div>
+        </div>
+      )}
       <div className="max-w-3xl mx-auto p-8 bg-white rounded-lg shadow">
         <div className="flex flex-col items-center gap-6">
           <div

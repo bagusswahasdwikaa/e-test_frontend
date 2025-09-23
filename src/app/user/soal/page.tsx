@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from '@/services/axios';
 import UserLayout from '@/components/UserLayout';
@@ -27,9 +27,64 @@ export default function SoalPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [nilai, setNilai] = useState<number | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [timer, setTimer] = useState<number>(0); // detik tersisa
 
   const router = useRouter();
+  const timerActiveRef = useRef(true); // supaya handleSubmit dari interval tidak ganda
 
+  // Fungsi submit ujian, dipakai manual dan auto-submit waktu habis
+  const handleSubmit = async () => {
+    if (!ujianId) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    // Cegah submit ganda
+    if (submitLoading) return;
+    
+    timerActiveRef.current = false; // hentikan timer
+    setSubmitLoading(true);
+
+    const jawabanObj: Record<string, number> = {};
+    soalList.forEach((s) => {
+      if (typeof s.jawaban_terpilih === 'number') {
+        jawabanObj[s.soal_id.toString()] = s.jawaban_terpilih;
+      }
+    });
+
+    if (Object.keys(jawabanObj).length === 0) {
+      alert('Anda belum memilih jawaban apapun.');
+      setSubmitLoading(false);
+      return;
+    }
+
+    // Kalau ini auto submit (waktu habis), lewati konfirmasi
+    // Kalau manual, minta konfirmasi dulu
+    // Kita bedakan lewat submitLoading yang sudah dicegah submit ganda di atas
+
+    try {
+      const res = await axios.post(
+        `/user/ujians/${ujianId}/submit`,
+        { jawaban: jawabanObj },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data && typeof res.data.nilai === 'number') {
+        setNilai(res.data.nilai);
+        localStorage.removeItem('ujian_id');
+        localStorage.removeItem('kode_soal');
+        localStorage.removeItem('ujian_start_time');
+      } else {
+        alert('Ujian berhasil disubmit, tapi nilai tidak tersedia.');
+      }
+    } catch (error: any) {
+      console.error('Gagal submit ujian:', error);
+      alert('Gagal submit ujian. Silakan coba lagi.');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  // Load soal & timer
   useEffect(() => {
     async function mulaiDanAmbilSoal() {
       const token = localStorage.getItem('token');
@@ -52,12 +107,46 @@ export default function SoalPage() {
       setUjianId(parsedUjianId);
 
       try {
+        // Ambil durasi ujian dari API ujian detail
+        const ujianRes = await axios.get(`/user/ujians/${parsedUjianId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const durasiMenit = ujianRes.data?.data?.durasi ?? 0;
+
+        // Ambil waktu mulai ujian dari localStorage
+        const ujianStartTimeStr = localStorage.getItem('ujian_start_time');
+        let ujianStartTime = ujianStartTimeStr ? parseInt(ujianStartTimeStr) : null;
+
+        if (!ujianStartTime) {
+          // Kalau belum ada, set waktu mulai sekarang dan simpan
+          ujianStartTime = Date.now();
+          localStorage.setItem('ujian_start_time', ujianStartTime.toString());
+        }
+
+        // Hitung sisa waktu detik
+        const durasiDetik = durasiMenit * 60;
+        const elapsedDetik = Math.floor((Date.now() - ujianStartTime) / 1000);
+        let sisaDetik = durasiDetik - elapsedDetik;
+
+        if (sisaDetik <= 0) {
+          // Waktu habis, langsung submit dan return
+          alert('Waktu ujian sudah habis.');
+          await handleSubmit();
+          setLoading(false);
+          return;
+        }
+
+        setTimer(sisaDetik);
+
+        // Mulai ujian di server
         await axios.post(
           `/user/ujians/${parsedUjianId}/kerjakan`,
           { kode_soal },
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
+        // Ambil soal
         const soalRes = await axios.get(`/user/ujians/${parsedUjianId}/soal`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -90,6 +179,28 @@ export default function SoalPage() {
     mulaiDanAmbilSoal();
   }, [router]);
 
+  // Timer countdown effect
+  useEffect(() => {
+    if (timer <= 0) return;
+    if (!timerActiveRef.current) return;
+
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (timerActiveRef.current) {
+            alert('Waktu ujian habis, ujian akan disubmit otomatis.');
+            handleSubmit();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timer]);
+
   const handlePilihJawaban = (jawabanId: number) => {
     setSoalList((prev) =>
       prev.map((s, idx) =>
@@ -106,53 +217,10 @@ export default function SoalPage() {
     if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
   };
 
-  const handleSubmit = async () => {
-    if (!ujianId) return;
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const jawabanObj: Record<string, number> = {};
-    soalList.forEach((s) => {
-      if (typeof s.jawaban_terpilih === 'number') {
-        jawabanObj[s.soal_id.toString()] = s.jawaban_terpilih;
-      }
-    });
-
-    if (Object.keys(jawabanObj).length === 0) {
-      alert('Anda belum memilih jawaban apapun.');
-      return;
-    }
-
-    if (Object.keys(jawabanObj).length < soalList.length) {
-      const lanjut = confirm('Masih ada soal yang belum dijawab. Tetap submit?');
-      if (!lanjut) return;
-    }
-
-    const konfirmasi = confirm('Apakah Anda yakin ingin mengakhiri dan mengirim ujian ini?');
-    if (!konfirmasi) return;
-
-    setSubmitLoading(true);
-
-    try {
-      const res = await axios.post(
-        `/user/ujians/${ujianId}/submit`,
-        { jawaban: jawabanObj },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data && typeof res.data.nilai === 'number') {
-        setNilai(res.data.nilai);
-        localStorage.removeItem('ujian_id');
-        localStorage.removeItem('kode_soal');
-      } else {
-        alert('Ujian berhasil disubmit, tapi nilai tidak tersedia.');
-      }
-    } catch (error: any) {
-      console.error('Gagal submit ujian:', error);
-      alert('Gagal submit ujian. Silakan coba lagi.');
-    } finally {
-      setSubmitLoading(false);
-    }
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   const soal = soalList[currentIndex];
@@ -181,9 +249,13 @@ export default function SoalPage() {
           <p>Tidak ada soal tersedia.</p>
         ) : (
           <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-            <h2 className="text-xl font-semibold mb-4">
-              Soal {currentIndex + 1} dari {soalList.length}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                Soal {currentIndex + 1} dari {soalList.length}
+              </h2>
+              <div className="text-xl font-mono text-red-600">{formatTime(timer)}</div>
+            </div>
+
             <p className="mb-4 whitespace-pre-line">{soal.pertanyaan}</p>
 
             {soal.media_url && (
