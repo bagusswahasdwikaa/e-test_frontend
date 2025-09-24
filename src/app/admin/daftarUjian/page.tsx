@@ -12,7 +12,7 @@ interface Ujian {
   tanggal_mulai: string;
   tanggal_akhir: string;
   durasi: number;
-  status: 'Aktif' | 'Non Aktif';
+  status: 'Aktif' | 'Tidak Aktif';
   kode: string;
   jumlahSoal: number;
 }
@@ -70,12 +70,12 @@ export default function DaftarUjianPage() {
     return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
   };
 
-  const hitungStatus = (mulai: string, akhir: string): 'Aktif' | 'Non Aktif' => {
+  const hitungStatus = (mulai: string, akhir: string): 'Aktif' | 'Tidak Aktif' => {
     const now = Date.now();
     const mulaiTime = new Date(mulai).getTime();
     const akhirTime = new Date(akhir).getTime();
-    if (isNaN(mulaiTime) || isNaN(akhirTime)) return 'Non Aktif';
-    return now >= mulaiTime && now <= akhirTime ? 'Aktif' : 'Non Aktif';
+    if (isNaN(mulaiTime) || isNaN(akhirTime)) return 'Tidak Aktif';
+    return now >= mulaiTime && now <= akhirTime ? 'Aktif' : 'Tidak Aktif';
   };
 
   // --- fungsi load ulang daftar ujian (dipakai ulang) ---
@@ -365,13 +365,25 @@ export default function DaftarUjianPage() {
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
-          <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-white border-solid"></div>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
+          {/* Logo diam di tengah */}
+          <div className="relative w-35 h-35">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/assets/logo/panasonic-logo.png"
+                alt="Logo Panasonic"
+                className="w-25 h-25 object-contain"
+              />
+            </div>
+
+            {/* Spinner berputar di belakang logo */}
+            <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
+          </div>
         </div>
       )}
       <div className="mb-6">
         {/* Judul */}
-        <h1 className="text-2xl font-bold mb-2">Daftar Ujian</h1>
+        <h1 className="text-2xl font-bold mb-5">Daftar Ujian</h1>
 
         {/* Tombol-tombol */}
         <div className="flex flex-wrap gap-2">
@@ -454,7 +466,7 @@ export default function DaftarUjianPage() {
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             u.status === 'Aktif'
                               ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-600'
+                              : 'bg-red-200 text-red-800'
                           }`}
                         >
                           {u.status}

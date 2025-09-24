@@ -185,14 +185,26 @@ export default function DaftarPesertaPage() {
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       {/* Overlay Loading */}
       {(loading || actionLoading) && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-white border-solid"></div>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
+          {/* Logo diam di tengah */}
+          <div className="relative w-35 h-35">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/assets/logo/panasonic-logo.png"
+                alt="Logo Panasonic"
+                className="w-25 h-25 object-contain"
+              />
+            </div>
+
+            {/* Spinner berputar di belakang logo */}
+            <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
+          </div>
         </div>
       )}
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-2">Daftar Peserta</h1>
+        <h1 className="text-2xl font-bold mb-5">Daftar Peserta</h1>
 
         <div>
           <button
