@@ -38,7 +38,7 @@ export default function DaftarUjianPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchPeserta, setSearchPeserta] = useState('');
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false); // loading saat aksi (hapus/edit)
+  const [actionLoading, setActionLoading] = useState(false);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,7 +50,10 @@ export default function DaftarUjianPage() {
   });
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [selectedUjian, setSelectedUjian] = useState<Ujian | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  
+  // PISAHKAN STATE MODAL
+  const [showBagikanModal, setShowBagikanModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // === STATE UNTUK KLONING ===
   const [showCloneModal, setShowCloneModal] = useState(false);
@@ -168,7 +171,7 @@ export default function DaftarUjianPage() {
     if (!ujianToDelete) return;
 
     setSelectedUjian(ujianToDelete);
-    setShowModal(true);
+    setShowDeleteModal(true); // GUNAKAN showDeleteModal
   };
 
   const confirmDelete = async () => {
@@ -188,7 +191,7 @@ export default function DaftarUjianPage() {
         prev.filter((p) => p.id !== selectedUjian.id)
       );
 
-      setShowModal(false);
+      setShowDeleteModal(false); // GUNAKAN showDeleteModal
       setSelectedUjian(null);
     } catch (err) {
       alert('Terjadi kesalahan saat menghapus ujian.');
@@ -313,7 +316,7 @@ export default function DaftarUjianPage() {
 
       setSelectedEmails([]); // reset pilihan email
       setSelectedUjian(ujian); // set ujian yang dipilih
-      setShowModal(true); // buka modal
+      setShowBagikanModal(true); // GUNAKAN showBagikanModal
     } catch (err: any) {
       console.error('Error fetch peserta:', err);
       alert(`Gagal mengambil daftar peserta: ${err.message}`);
@@ -345,7 +348,7 @@ export default function DaftarUjianPage() {
       });
       if (!res.ok) throw new Error('Gagal assign peserta');
       alert('Ujian Berhasil di bagikan.');
-      setShowModal(false);
+      setShowBagikanModal(false); // GUNAKAN showBagikanModal
     } catch (err) {
       console.error(err);
       alert('Gagal kirim notifikasi.');
@@ -552,7 +555,7 @@ export default function DaftarUjianPage() {
       )}
 
      {/* Modal Bagikan */}
-      {showModal && selectedUjian && (
+      {showBagikanModal && selectedUjian && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-lg font-bold mb-4">
@@ -621,7 +624,7 @@ export default function DaftarUjianPage() {
             {/* Tombol Aksi */}
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowBagikanModal(false)}
                 className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded transition cursor-pointer"
               >
                 Batal
@@ -691,8 +694,9 @@ export default function DaftarUjianPage() {
           </div>
         </div>
       )}
+
       {/* Modal Konfirmasi Hapus */}
-      {showModal && selectedUjian && (
+      {showDeleteModal && selectedUjian && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
             <h2 className="text-lg font-semibold text-gray-800 mb-3">
@@ -704,16 +708,21 @@ export default function DaftarUjianPage() {
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowDeleteModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer"
+                disabled={actionLoading}
+                className={`px-4 py-2 rounded text-white cursor-pointer ${
+                  actionLoading 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
               >
-                Hapus
+                {actionLoading ? 'Menghapus...' : 'Hapus'}
               </button>
             </div>
           </div>

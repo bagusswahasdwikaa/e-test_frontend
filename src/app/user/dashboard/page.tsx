@@ -120,7 +120,24 @@ export default function UserDashboardPage() {
 
   return (
     <UserLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
-      <main className="flex-1 p-6 sm:p-8 overflow-auto bg-gray-200 min-h-screen">
+      {loading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
+          {/* Logo diam di tengah */}
+          <div className="relative w-35 h-35">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/assets/logo/panasonic-logo.png"
+                alt="Logo Panasonic"
+                className="w-25 h-25 object-contain"
+              />
+            </div>
+
+            {/* Spinner berputar di belakang logo */}
+            <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
+          </div>
+        </div>
+      )}
+      <main className="flex-1 p-6 sm:p-8 overflow-auto min-h-screen">
         <h1 className="text-2xl font-semibold mb-6 text-gray-800">
           Selamat datang, {userName}!
         </h1>

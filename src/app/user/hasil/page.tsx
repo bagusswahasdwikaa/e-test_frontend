@@ -75,9 +75,25 @@ export default function HasilPage() {
 
   return (
     <UserLayout>
-      <main className="p-6 bg-gray-100 min-h-screen">
-        <h1 className="text-2xl font-semibold mb-6">Hasil Ujian</h1>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
+          {/* Logo diam di tengah */}
+          <div className="relative w-35 h-35">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/assets/logo/panasonic-logo.png"
+                alt="Logo Panasonic"
+                className="w-25 h-25 object-contain"
+              />
+            </div>
 
+            {/* Spinner berputar di belakang logo */}
+            <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
+          </div>
+        </div>
+      )}
+      <main className="p-6 min-h-screen">
+        <h1 className="text-2xl font-semibold mb-6">Hasil Ujian</h1>
         {loading ? (
           <p className="text-gray-600">Memuat hasil ujian...</p>
         ) : errorMsg ? (
