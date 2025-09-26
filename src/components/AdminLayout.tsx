@@ -62,9 +62,9 @@ export default function AdminLayout({
 
   if (!isAuthorized) return null;
 
-  // ukuran dinamis
-  const sidebarWidth = isSidebarCollapsed ? 80 : 260; // 260px = w-64
-  const headerHeight = 56; // sesuai AdminHeader.tsx (h-14)
+  // Ukuran dinamis yang disesuaikan dengan komponen yang diperbarui
+  const sidebarWidth = isSidebarCollapsed ? 80 : 280; // Disesuaikan dengan enhanced sidebar
+  const headerHeight = 72; // Disesuaikan dengan enhanced header
 
   return (
     <div

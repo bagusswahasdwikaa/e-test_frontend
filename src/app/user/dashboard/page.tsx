@@ -13,6 +13,8 @@ interface Ujian {
   status: string;
   kode_soal: string;
   status_peserta: string;
+  started_at?: string | null;
+  end_time?: string | null;
 }
 
 export default function UserDashboardPage() {
@@ -28,7 +30,7 @@ export default function UserDashboardPage() {
   const [kodeInput, setKodeInput] = useState('');
   const [kodeError, setKodeError] = useState('');
 
-  // 🔄 Buat fungsi fetch agar bisa dipanggil ulang
+  // 🔄 Ambil data ujian user
   const fetchUjian = useCallback(async () => {
     try {
       setLoading(true);
@@ -41,9 +43,7 @@ export default function UserDashboardPage() {
       }
 
       const response = await axios.get('/user/ujians', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const rawData = response.data?.data ?? [];
@@ -57,6 +57,8 @@ export default function UserDashboardPage() {
           status: ujian.status ?? 'Tidak Diketahui',
           kode_soal: ujian.kode_soal ?? '',
           status_peserta: item.status_peserta,
+          started_at: item.started_at ?? null,
+          end_time: item.end_time ?? null,
         };
       });
 
@@ -82,11 +84,11 @@ export default function UserDashboardPage() {
 
     fetchUjian();
 
-    // 👂 Dengarkan event perubahan localStorage
+    // 👂 Dengarkan event perubahan localStorage (misalnya setelah submit)
     const handleStorageUpdate = (e: StorageEvent) => {
       if (e.key === 'ujian_submitted') {
-        fetchUjian(); // refresh list ujian
-        localStorage.removeItem('ujian_submitted'); // bersihkan flag
+        fetchUjian();
+        localStorage.removeItem('ujian_submitted');
       }
     };
     window.addEventListener('storage', handleStorageUpdate);
@@ -104,17 +106,44 @@ export default function UserDashboardPage() {
     setShowModal(true);
   };
 
-  const handleVerifikasiKode = () => {
-    if (kodeInput === selectedUjian?.kode_soal) {
-      localStorage.setItem('ujian_id', selectedUjian.ujian_id.toString());
-      localStorage.setItem('kode_soal', kodeInput);
+  const handleVerifikasiKode = async () => {
+    if (!selectedUjian) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/authentication/login');
+        return;
+      }
 
-      // 🟢 pasang flag supaya dashboard reload setelah submit
-      localStorage.setItem('ujian_submitted', 'pending');
+      const response = await axios.post(
+        `/user/ujians/${selectedUjian.ujian_id}/kerjakan`,
+        { kode_soal: kodeInput },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      router.push('/user/soal');
-    } else {
-      setKodeError('Kode soal salah. Coba lagi.');
+      if (response.data.success) {
+        // ✅ Simpan data ke localStorage untuk dipakai di halaman soal
+        localStorage.setItem('ujian_id', selectedUjian.ujian_id.toString());
+        localStorage.setItem('kode_soal', kodeInput);
+        localStorage.setItem('started_at', response.data.started_at);
+        localStorage.setItem('end_time', response.data.end_time);
+
+        // flag supaya dashboard reload setelah submit
+        localStorage.setItem('ujian_submitted', 'pending');
+
+        router.push('/user/soal');
+      } else {
+        setKodeError(response.data.message || 'Kode soal salah.');
+      }
+    } catch (error: any) {
+      // ❌ Jangan munculin AxiosError merah
+      let message = 'Kode soal salah.';
+      if (error.response?.data?.errors?.kode_soal) {
+        message = error.response.data.errors.kode_soal[0];
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      setKodeError(message);
     }
   };
 
@@ -122,7 +151,6 @@ export default function UserDashboardPage() {
     <UserLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       {loading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
-          {/* Logo diam di tengah */}
           <div className="relative w-35 h-35">
             <div className="absolute inset-0 flex items-center justify-center">
               <img
@@ -131,12 +159,11 @@ export default function UserDashboardPage() {
                 className="w-25 h-25 object-contain"
               />
             </div>
-
-            {/* Spinner berputar di belakang logo */}
             <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
           </div>
         </div>
       )}
+
       <main className="flex-1 p-6 sm:p-8 overflow-auto min-h-screen">
         <h1 className="text-2xl font-semibold mb-6 text-gray-800">
           Selamat datang, {userName}!

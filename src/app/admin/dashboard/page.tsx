@@ -204,7 +204,7 @@ export default function AdminDashboard() {
                   <div className="p-2 bg-green-100 rounded-lg">
                     <AcademicCapIcon className="h-6 w-6 text-green-600" />
                   </div>
-                  Distribusi Peserta
+                  Diagram Akun Peserta
                 </h2>
 
                 {(data.peserta.aktif === 0 && data.peserta.tidak_aktif === 0) ? (

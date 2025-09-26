@@ -16,7 +16,7 @@ interface Soal {
   media_url?: string | null;
   media_type?: string | null;
   jawabans: Jawaban[];
-  jawaban_terpilih?: number | null;
+  jawaban_terpilih?: number | string | null;
 }
 
 export default function SoalPage() {
@@ -27,39 +27,49 @@ export default function SoalPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [nilai, setNilai] = useState<number | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [timer, setTimer] = useState<number>(0); // detik tersisa
+  const [timer, setTimer] = useState<number>(0);
 
   const router = useRouter();
-  const timerActiveRef = useRef(true); // supaya handleSubmit dari interval tidak ganda
+  const timerActiveRef = useRef(true);
 
-  // Fungsi submit ujian, dipakai manual dan auto-submit waktu habis
-  const handleSubmit = async () => {
+  // === Simpan jawaban sementara ke backend ===
+  const saveJawaban = async (soalId: number, jawabanId: number | string) => {
     if (!ujianId) return;
     const token = localStorage.getItem('token');
     if (!token) return;
-    
-    // Cegah submit ganda
-    if (submitLoading) return;
-    
-    timerActiveRef.current = false; // hentikan timer
-    setSubmitLoading(true);
 
-    const jawabanObj: Record<string, number> = {};
-    soalList.forEach((s) => {
-      if (typeof s.jawaban_terpilih === 'number') {
-        jawabanObj[s.soal_id.toString()] = s.jawaban_terpilih;
-      }
-    });
+    try {
+      await axios.post(
+        `/user/ujians/${ujianId}/jawaban`,
+        { jawaban: { [soalId]: jawabanId } },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error('Gagal simpan jawaban sementara:', err);
+    }
+  };
 
-    if (Object.keys(jawabanObj).length === 0) {
-      alert('Anda belum memilih jawaban apapun.');
-      setSubmitLoading(false);
+  // === Submit ujian ===
+  const handleSubmit = async (auto = false) => {
+    if (!ujianId) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setErrorMsg('Sesi anda sudah habis. Silakan login ulang.');
+      router.push('/login');
       return;
     }
 
-    // Kalau ini auto submit (waktu habis), lewati konfirmasi
-    // Kalau manual, minta konfirmasi dulu
-    // Kita bedakan lewat submitLoading yang sudah dicegah submit ganda di atas
+    if (submitLoading) return;
+
+    timerActiveRef.current = false;
+    setSubmitLoading(true);
+
+    const jawabanObj: Record<string, number | string> = {};
+    soalList.forEach((s) => {
+      if (s.jawaban_terpilih !== null && s.jawaban_terpilih !== undefined) {
+        jawabanObj[s.soal_id.toString()] = s.jawaban_terpilih;
+      }
+    });
 
     try {
       const res = await axios.post(
@@ -68,25 +78,38 @@ export default function SoalPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (res.data && typeof res.data.nilai === 'number') {
+      if (res.data?.success) {
         setNilai(res.data.nilai);
         localStorage.removeItem('ujian_id');
         localStorage.removeItem('kode_soal');
-        localStorage.removeItem('ujian_start_time');
+        localStorage.removeItem('started_at');
+        localStorage.removeItem('end_time');
       } else {
-        alert('Ujian berhasil disubmit, tapi nilai tidak tersedia.');
+        setErrorMsg(res.data?.message || 'Submit gagal.');
       }
     } catch (error: any) {
       console.error('Gagal submit ujian:', error);
-      alert('Gagal submit ujian. Silakan coba lagi.');
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setErrorMsg('Sesi anda sudah habis. Ujian otomatis diselesaikan.');
+        setNilai(0);
+      } else {
+        setErrorMsg(
+          error.response?.data?.message || 'Gagal submit ujian. Ujian dianggap selesai.'
+        );
+        setNilai(0);
+      }
+      localStorage.removeItem('ujian_id');
+      localStorage.removeItem('kode_soal');
+      localStorage.removeItem('started_at');
+      localStorage.removeItem('end_time');
     } finally {
       setSubmitLoading(false);
     }
   };
 
-  // Load soal & timer
+  // === Ambil soal & timer dari backend ===
   useEffect(() => {
-    async function mulaiDanAmbilSoal() {
+    async function loadSoal() {
       const token = localStorage.getItem('token');
       const ujian_id = localStorage.getItem('ujian_id');
       const kode_soal = localStorage.getItem('kode_soal');
@@ -107,57 +130,58 @@ export default function SoalPage() {
       setUjianId(parsedUjianId);
 
       try {
-        // Ambil durasi ujian dari API ujian detail
-        const ujianRes = await axios.get(`/user/ujians/${parsedUjianId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        let startedAt: string | null = localStorage.getItem('started_at');
+        let endTime: string | null = localStorage.getItem('end_time');
 
-        const durasiMenit = ujianRes.data?.data?.durasi ?? 0;
+        if (!startedAt || !endTime) {
+          const startRes = await axios.post(
+            `/user/ujians/${parsedUjianId}/kerjakan`,
+            { kode_soal },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
 
-        // Ambil waktu mulai ujian dari localStorage
-        const ujianStartTimeStr = localStorage.getItem('ujian_start_time');
-        let ujianStartTime = ujianStartTimeStr ? parseInt(ujianStartTimeStr) : null;
+          if (!startRes.data.success) {
+            setErrorMsg(startRes.data.message || 'Gagal mulai ujian.');
+            setLoading(false);
+            return;
+          }
 
-        if (!ujianStartTime) {
-          // Kalau belum ada, set waktu mulai sekarang dan simpan
-          ujianStartTime = Date.now();
-          localStorage.setItem('ujian_start_time', ujianStartTime.toString());
+          startedAt = startRes.data.started_at as string;
+          endTime = startRes.data.end_time as string;
+
+          localStorage.setItem('started_at', startedAt);
+          localStorage.setItem('end_time', endTime);
         }
 
-        // Hitung sisa waktu detik
-        const durasiDetik = durasiMenit * 60;
-        const elapsedDetik = Math.floor((Date.now() - ujianStartTime) / 1000);
-        let sisaDetik = durasiDetik - elapsedDetik;
-
-        if (sisaDetik <= 0) {
-          // Waktu habis, langsung submit dan return
-          alert('Waktu ujian sudah habis.');
-          await handleSubmit();
+        if (!endTime) {
+          setErrorMsg('Data waktu ujian tidak valid.');
           setLoading(false);
           return;
         }
 
-        setTimer(sisaDetik);
+        const end = new Date(endTime).getTime();
+        const now = Date.now();
+        const sisa = Math.floor((end - now) / 1000);
 
-        // Mulai ujian di server
-        await axios.post(
-          `/user/ujians/${parsedUjianId}/kerjakan`,
-          { kode_soal },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        if (sisa <= 0) {
+          await handleSubmit(true);
+          setLoading(false);
+          return;
+        }
 
-        // Ambil soal
+        setTimer(sisa);
+
         const soalRes = await axios.get(`/user/ujians/${parsedUjianId}/soal`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const rawSoal = soalRes.data?.data ?? [];
-        if (!Array.isArray(rawSoal) || rawSoal.length === 0) {
-          setErrorMsg('Tidak ada soal tersedia.');
+        if (!soalRes.data?.success) {
+          setErrorMsg(soalRes.data.message || 'Gagal ambil soal.');
           setLoading(false);
           return;
         }
 
+        const rawSoal = soalRes.data.data ?? [];
         setSoalList(
           rawSoal.map((item: any) => ({
             soal_id: item.soal_id,
@@ -165,24 +189,23 @@ export default function SoalPage() {
             media_url: item.media_url,
             media_type: item.media_type,
             jawabans: item.jawabans,
-            jawaban_terpilih: typeof item.jawaban_user === 'number' ? item.jawaban_user : null,
+            jawaban_terpilih: item.jawaban_user ?? null, // <-- ambil jawaban lama dari backend
           }))
         );
       } catch (error: any) {
         console.error('Error mengambil soal:', error);
-        setErrorMsg(error.response?.data?.message ?? `Gagal memuat soal: ${error.message}`);
+        setErrorMsg(error.response?.data?.message || 'Gagal memuat soal.');
       } finally {
         setLoading(false);
       }
     }
 
-    mulaiDanAmbilSoal();
+    loadSoal();
   }, [router]);
 
-  // Timer countdown effect
+  // === Timer countdown ===
   useEffect(() => {
-    if (timer <= 0) return;
-    if (!timerActiveRef.current) return;
+    if (timer <= 0 || !timerActiveRef.current) return;
 
     const interval = setInterval(() => {
       setTimer((prev) => {
@@ -190,7 +213,7 @@ export default function SoalPage() {
           clearInterval(interval);
           if (timerActiveRef.current) {
             alert('Waktu ujian habis, ujian akan disubmit otomatis.');
-            handleSubmit();
+            handleSubmit(true);
           }
           return 0;
         }
@@ -201,12 +224,19 @@ export default function SoalPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const handlePilihJawaban = (jawabanId: number) => {
+  // === Navigasi soal & simpan jawaban ===
+  const handlePilihJawaban = (jawabanId: number | string) => {
+    const soalSekarang = soalList[currentIndex];
     setSoalList((prev) =>
       prev.map((s, idx) =>
         idx === currentIndex ? { ...s, jawaban_terpilih: jawabanId } : s
       )
     );
+
+    // Simpan langsung ke backend
+    if (soalSekarang) {
+      saveJawaban(soalSekarang.soal_id, jawabanId);
+    }
   };
 
   const handleNext = () => {
@@ -225,103 +255,290 @@ export default function SoalPage() {
 
   const soal = soalList[currentIndex];
 
+  // Progress bar calculation
+  const progress = soalList.length > 0 ? ((currentIndex + 1) / soalList.length) * 100 : 0;
+  const answeredCount = soalList.filter(s => s.jawaban_terpilih !== null && s.jawaban_terpilih !== undefined).length;
+
+  // Timer color based on remaining time
+  const getTimerColor = () => {
+    if (timer > 600) return 'text-green-600'; // > 10 minutes
+    if (timer > 300) return 'text-yellow-600'; // > 5 minutes
+    return 'text-red-600'; // < 5 minutes
+  };
+
   return (
     <UserLayout>
-      <main className="p-6 bg-gray-100 min-h-screen">
-        {loading ? (
-          <p>Memuat soal...</p>
-        ) : errorMsg ? (
-          <p className="text-red-500">{errorMsg}</p>
-        ) : nilai !== null ? (
-          <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow text-center">
-            <h2 className="text-2xl font-bold mb-4">Ujian Selesai</h2>
-            <p className="text-lg mb-2">
-              Nilai Anda: <span className="font-semibold">{nilai}</span>
-            </p>
-            <button
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              onClick={() => router.push('/user/hasil')}
-            >
-              Lihat Hasil Ujian
-            </button>
-          </div>
-        ) : soalList.length === 0 ? (
-          <p>Tidak ada soal tersedia.</p>
-        ) : (
-          <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">
-                Soal {currentIndex + 1} dari {soalList.length}
-              </h2>
-              <div className="text-xl font-mono text-red-600">{formatTime(timer)}</div>
-            </div>
-
-            <p className="mb-4 whitespace-pre-line">{soal.pertanyaan}</p>
-
-            {soal.media_url && (
-              <div className="mb-4">
-                {soal.media_type === 'image' ? (
-                  <img
-                    src={soal.media_url}
-                    alt="Media soal"
-                    className="w-full max-h-64 object-contain rounded"
-                  />
-                ) : (
-                  <video controls className="w-full rounded">
-                    <source src={soal.media_url} type="video/mp4" />
-                    Browser tidak mendukung video.
-                  </video>
-                )}
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+        <div className="max-w-5xl mx-auto">
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md w-full">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                <p className="text-lg font-medium text-gray-700">Memuat soal ujian...</p>
+                <p className="text-sm text-gray-500 mt-2">Mohon tunggu sebentar</p>
               </div>
-            )}
-
-            <div className="space-y-2">
-              {soal.jawabans.map((option) => (
-                <div key={option.id} className="flex items-center">
-                  <input
-                    type="radio"
-                    id={`jawaban-${option.id}`}
-                    name={`jawaban-${soal.soal_id}`}
-                    value={option.id}
-                    checked={soal.jawaban_terpilih === option.id}
-                    onChange={() => handlePilihJawaban(option.id)}
-                    className="mr-2"
-                  />
-                  <label htmlFor={`jawaban-${option.id}`}>{option.jawaban}</label>
+            </div>
+          ) : errorMsg ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md w-full border-l-4 border-red-500">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
                 </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between mt-6">
-              <button
-                className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
-              >
-                Sebelumnya
-              </button>
-
-              {currentIndex === soalList.length - 1 ? (
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Terjadi Kesalahan</h3>
+                <p className="text-red-600 mb-4">{errorMsg}</p>
                 <button
-                  className={`text-white px-4 py-2 rounded hover:bg-blue-700 ${
-                    submitLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600'
-                  }`}
-                  onClick={handleSubmit}
-                  disabled={submitLoading}
+                  onClick={() => router.push('/user/dashboard')}
+                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
                 >
-                  {submitLoading ? 'Mengirim...' : 'Selesai Ujian'}
+                  Kembali ke Dashboard
                 </button>
-              ) : (
-                <button
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                  onClick={handleNext}
-                >
-                  Selanjutnya
-                </button>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : nilai !== null ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-lg w-full">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Ujian Selesai!</h2>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6">
+                  <p className="text-lg text-gray-700 mb-2">Nilai Anda:</p>
+                  <p className="text-4xl font-bold text-blue-600">{nilai ?? 'Belum tersedia'}</p>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Selamat! Anda telah menyelesaikan ujian dengan baik.
+                </p>
+                <button
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  onClick={() => router.push('/user/hasil')}
+                >
+                  Lihat Detail Hasil Ujian
+                </button>
+              </div>
+            </div>
+          ) : soalList.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md w-full">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-lg font-medium text-gray-700">Tidak ada soal tersedia</p>
+                <p className="text-sm text-gray-500 mt-2">Silakan hubungi administrator</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Header with Timer and Progress */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900">
+                        Soal {currentIndex + 1} dari {soalList.length}
+                      </h1>
+                      <p className="text-sm text-gray-600">
+                        {answeredCount} dari {soalList.length} soal terjawab
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center md:text-right">
+                    <div className={`text-3xl font-mono font-bold ${getTimerColor()}`}>
+                      {formatTime(timer)}
+                    </div>
+                    <p className="text-sm text-gray-500">Waktu tersisa</p>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>Progress</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Question Card */}
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <div className="mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0 mt-1">
+                      {currentIndex + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-lg leading-relaxed text-gray-800 whitespace-pre-line">
+                        {soal.pertanyaan}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Media */}
+                {soal.media_url && (
+                  <div className="mb-8">
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      {soal.media_type === 'image' ? (
+                        <img
+                          src={soal.media_url}
+                          alt="Media soal"
+                          className="w-full max-h-80 object-contain rounded-lg mx-auto"
+                        />
+                      ) : (
+                        <video controls className="w-full max-h-80 rounded-lg">
+                          <source src={soal.media_url} type="video/mp4" />
+                          Browser tidak mendukung video.
+                        </video>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Answer Options */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Pilih jawaban:</h3>
+                  {soal.jawabans.map((option, index) => (
+                    <div
+                      key={option.id}
+                      className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        soal.jawaban_terpilih === option.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300 bg-white'
+                      }`}
+                      onClick={() => handlePilihJawaban(option.id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          soal.jawaban_terpilih === option.id
+                            ? 'border-blue-500 bg-blue-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {soal.jawaban_terpilih === option.id && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            soal.jawaban_terpilih === option.id
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {String.fromCharCode(65 + index)}
+                          </span>
+                          <span className={`text-base ${
+                            soal.jawaban_terpilih === option.id
+                              ? 'text-blue-900 font-medium'
+                              : 'text-gray-700'
+                          }`}>
+                            {option.jawaban}
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        type="radio"
+                        id={`jawaban-${option.id}`}
+                        name={`jawaban-${soal.soal_id}`}
+                        value={option.id}
+                        checked={soal.jawaban_terpilih === option.id}
+                        onChange={() => handlePilihJawaban(option.id)}
+                        className="absolute opacity-0 inset-0 w-full h-full cursor-pointer"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex justify-between items-center">
+                  <button
+                    className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handlePrev}
+                    disabled={currentIndex === 0}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Sebelumnya
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {soalList.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentIndex(index)}
+                        className={`w-10 h-10 rounded-full text-sm font-semibold transition-all duration-200 ${
+                          index === currentIndex
+                            ? 'bg-blue-500 text-white shadow-lg'
+                            : soalList[index].jawaban_terpilih !== null && soalList[index].jawaban_terpilih !== undefined
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  {currentIndex === soalList.length - 1 ? (
+                    <button
+                      className={`flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 transform hover:scale-105 ${
+                        submitLoading
+                          ? 'bg-blue-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:shadow-xl'
+                      }`}
+                      onClick={() => handleSubmit(false)}
+                      disabled={submitLoading}
+                    >
+                      {submitLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          Mengirim...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                          Selesai Ujian
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                      onClick={handleNext}
+                    >
+                      Selanjutnya
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </main>
     </UserLayout>
   );
