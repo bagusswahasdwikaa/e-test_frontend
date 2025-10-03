@@ -267,7 +267,6 @@ export default function AdminDashboard() {
                       { name: 'Aktif', value: data.ujian.aktif },
                       { name: 'Belum Dimulai', value: data.ujian.belum_dimulai },
                       { name: 'Selesai', value: data.ujian.selesai },
-                      { name: 'Tidak Aktif', value: data.ujian.non_aktif },
                     ]}
                     barCategoryGap="20%"
                   >

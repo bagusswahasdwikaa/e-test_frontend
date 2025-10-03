@@ -97,7 +97,7 @@ export default function RegisterPage() {
         {/* Right Form */}
         <div className="w-full md:w-1/2 flex flex-col items-center px-4 md:px-8">
           <div className="w-full backdrop-blur-md bg-white/30 rounded-xl p-6 shadow-lg">
-            <h2 className="text-2xl font-bold text-center text-white mb-9">Daftar E-Test</h2>
+            <h2 className="text-2xl font-bold text-center text-white mb-9">Daftar P-TEST</h2>
             <form onSubmit={handleSubmit} className="flex flex-col space-y-6 w-full">
               <input
                 type="number"
