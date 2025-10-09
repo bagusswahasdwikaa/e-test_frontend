@@ -140,7 +140,7 @@ export default function AdminHeader({
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-200 to-indigo-200 bg-clip-text text-transparent">
-              P-TEST
+              PGLSMID e-test
             </h1>
           </div>
         </div>

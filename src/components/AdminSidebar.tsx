@@ -8,11 +8,9 @@ import {
   FiUser,
   FiClipboard,
   FiBarChart2,
-  FiCheckSquare,
   FiX,
   FiAlertTriangle,
-  FiChevronLeft,
-  FiChevronRight,
+
 } from 'react-icons/fi';
 import { usePathname, useRouter } from 'next/navigation';
 import { Dispatch, SetStateAction, useState } from 'react';
@@ -221,12 +219,17 @@ export default function AdminSidebar({
                 transition={{ duration: 0.3 }}
                 className="flex items-center gap-3"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                  <FiBarChart2 className="text-white text-lg" />
+                <div className="w-10 h-15 rounded-md overflow-hidden shadow-lg">
+                  <img
+                    src="/assets/logo/p.png"
+                    alt="Logo PGLSMID"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
+
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-blue-200 to-indigo-200 bg-clip-text text-transparent">
-                    Menu
+                    PGLSMID Menu
                   </h1>
                 </div>
               </motion.div>
@@ -237,8 +240,12 @@ export default function AdminSidebar({
                 transition={{ duration: 0.3 }}
                 className="w-full flex justify-center"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                  <FiBarChart2 className="text-white text-lg" />
+                <div className="w-10 h-15 rounded-md overflow-hidden shadow-lg">
+                  <img
+                    src="/assets/logo/p.png"
+                    alt="Logo PGLSMID"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </motion.div>
             )}

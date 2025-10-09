@@ -93,7 +93,7 @@ export default function LoginPage() {
       {/* Form Section */}
       <div className="relative z-30 flex justify-start ml-20 w-full px-6 lg:px-20">
         <div className="w-full max-w-md backdrop-blur-md bg-white/30 rounded-xl p-6 shadow-lg">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">Masuk P-TEST</h2>
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">Masuk PGSLMID e-test</h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col space-y-5">
             <input

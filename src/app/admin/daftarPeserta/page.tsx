@@ -244,7 +244,7 @@ export default function DaftarPesertaPage() {
                   <SortArrow /> No
                 </div>
               </th>
-              <th className="px-4 py-3 w-24 whitespace-nowrap">ID Peserta</th>
+              <th className="px-4 py-3 w-24 whitespace-nowrap">NIK</th>
               <th className="px-4 py-3 w-40">Avatar</th>
               <th className="px-4 py-3">Nama Lengkap</th>
               <th className="px-4 py-3">Email</th>

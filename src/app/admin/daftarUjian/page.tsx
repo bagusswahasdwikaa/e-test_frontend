@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
-import { ShareIcon, PencilSquareIcon, TrashIcon, EyeIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
+import { ShareIcon, PencilSquareIcon, TrashIcon, EyeIcon, DocumentDuplicateIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
 
 interface Ujian {
@@ -32,6 +32,14 @@ interface PesertaList {
 
 type SortDirection = 'asc' | 'desc';
 
+interface ColumnFilters {
+  kode: string;
+  nama: string;
+  status: string;
+  durasi: string;
+  jumlahSoal: string;
+}
+
 export default function DaftarUjianPage() {
   const router = useRouter();
   const [dataUjian, setDataUjian] = useState<Ujian[]>([]);
@@ -51,15 +59,23 @@ export default function DaftarUjianPage() {
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [selectedUjian, setSelectedUjian] = useState<Ujian | null>(null);
   
-  // PISAHKAN STATE MODAL
   const [showBagikanModal, setShowBagikanModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // === STATE UNTUK KLONING ===
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [selectedCloneId, setSelectedCloneId] = useState<number | ''>('');
   const [kodeSoalBaru, setKodeSoalBaru] = useState('');
   const [loadingClone, setLoadingClone] = useState(false);
+
+  // State untuk filter kolom
+  const [showFilters, setShowFilters] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({
+    kode: '',
+    nama: '',
+    status: '',
+    durasi: '',
+    jumlahSoal: '',
+  });
 
   const formatTanggal = (tanggal: string) => {
     if (!tanggal) return '-';
@@ -81,7 +97,6 @@ export default function DaftarUjianPage() {
     return now >= mulaiTime && now <= akhirTime ? 'Aktif' : 'Tidak Aktif';
   };
 
-  // --- fungsi load ulang daftar ujian (dipakai ulang) ---
   const fetchUjians = async () => {
     setLoading(true);
     try {
@@ -130,10 +145,51 @@ export default function DaftarUjianPage() {
   const handleToggleSort = () =>
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
 
-  const filteredData = dataUjian.filter((u) =>
-    u.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.kode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Reset semua filter
+  const resetFilters = () => {
+    setColumnFilters({
+      kode: '',
+      nama: '',
+      status: '',
+      durasi: '',
+      jumlahSoal: '',
+    });
+  };
+
+  // Cek apakah ada filter aktif
+  const hasActiveFilters = Object.values(columnFilters).some(val => val !== '');
+
+  // Filter data berdasarkan search term dan column filters
+  const filteredData = dataUjian.filter((u) => {
+    // Filter berdasarkan search term global
+    const matchSearch = u.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.kode.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchSearch) return false;
+
+    // Filter berdasarkan kolom-kolom spesifik
+    if (columnFilters.kode && !u.kode.toLowerCase().includes(columnFilters.kode.toLowerCase())) {
+      return false;
+    }
+    
+    if (columnFilters.nama && !u.nama.toLowerCase().includes(columnFilters.nama.toLowerCase())) {
+      return false;
+    }
+    
+    if (columnFilters.status && u.status !== columnFilters.status) {
+      return false;
+    }
+    
+    if (columnFilters.durasi && u.durasi.toString() !== columnFilters.durasi) {
+      return false;
+    }
+    
+    if (columnFilters.jumlahSoal && u.jumlahSoal.toString() !== columnFilters.jumlahSoal) {
+      return false;
+    }
+
+    return true;
+  });
 
   const filterPeserta = (list: Peserta[]) => {
     const term = searchPeserta.toLowerCase();
@@ -149,10 +205,7 @@ export default function DaftarUjianPage() {
 
   const sortedData = React.useMemo(() => {
     return [...filteredData].sort((a, b) => {
-      const aTime = new Date(a.tanggal_mulai).getTime();
-      const bTime = new Date(b.tanggal_mulai).getTime();
-      if (isNaN(aTime) || isNaN(bTime)) return 0;
-      return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
+      return sortDirection === 'asc' ? a.id - b.id : b.id - a.id;
     });
   }, [filteredData, sortDirection]);
 
@@ -166,12 +219,11 @@ export default function DaftarUjianPage() {
   const goToNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
 
   const handleDelete = (ujianId: number) => {
-    // Find the ujian to delete
     const ujianToDelete = dataUjian.find(u => u.id === ujianId);
     if (!ujianToDelete) return;
 
     setSelectedUjian(ujianToDelete);
-    setShowDeleteModal(true); // GUNAKAN showDeleteModal
+    setShowDeleteModal(true);
   };
 
   const confirmDelete = async () => {
@@ -191,7 +243,7 @@ export default function DaftarUjianPage() {
         prev.filter((p) => p.id !== selectedUjian.id)
       );
 
-      setShowDeleteModal(false); // GUNAKAN showDeleteModal
+      setShowDeleteModal(false);
       setSelectedUjian(null);
     } catch (err) {
       alert('Terjadi kesalahan saat menghapus ujian.');
@@ -200,9 +252,8 @@ export default function DaftarUjianPage() {
     }
   };
 
-  // ================== FUNGSI KLONING ==================
   const openCloneModal = () => {
-    setSelectedCloneId(''); // reset
+    setSelectedCloneId('');
     setKodeSoalBaru('');
     setShowCloneModal(true);
   };
@@ -225,13 +276,10 @@ export default function DaftarUjianPage() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-          // Jika API menggunakan Bearer token, tambahkan:
-          // 'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ kode_soal: kodeSoalBaru.trim() }),
       });
 
-      // baca body (bisa JSON atau teks)
       const text = await res.text();
       let data: any = null;
       try {
@@ -241,24 +289,20 @@ export default function DaftarUjianPage() {
       }
 
       if (!res.ok) {
-        // try tampung pesan error dari response JSON
         const msg = data?.message || (typeof data === 'string' ? data : 'Gagal mengkloning ujian.');
         throw new Error(msg);
       }
 
-      // sukses
       alert('Ujian berhasil dikloning.');
       setShowCloneModal(false);
       setKodeSoalBaru('');
       setSelectedCloneId('');
-      // reload daftar ujian
       await fetchUjians();
     } catch (err: any) {
       console.error('Terjadi kesalahan saat kloning:', err);
       const msg = err?.message || String(err);
       alert(`Terjadi kesalahan saat kloning: ${msg}`);
 
-      // jika error adalah "Failed to fetch", beri petunjuk debug
       if (msg === 'Failed to fetch') {
         alert(
           'Catatan: "Failed to fetch" sering berarti backend tidak dapat dijangkau atau ada masalah CORS. ' +
@@ -269,16 +313,13 @@ export default function DaftarUjianPage() {
       setLoadingClone(false);
     }
   };
-  // ====================================================
 
   const openBagikanModal = async (ujian: Ujian) => {
     try {
-      // Ambil semua peserta
       const res = await fetch('http://localhost:8000/api/list-peserta');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
-      // Map data peserta ke format yang diinginkan
       const semuaPeserta: Peserta[] = json.data.map((p: any) => ({
         ID_Peserta: p.ID_Peserta,
         Nama_Lengkap: p['Nama Lengkap'] ?? '—',
@@ -287,15 +328,12 @@ export default function DaftarUjianPage() {
         photo_url: p['Photo URL'] ?? null,
       }));
 
-      // Filter peserta yang statusnya 'aktif' saja
       const pesertaAktif = semuaPeserta.filter(p => p.Status === 'aktif');
 
-      // Ambil peserta yang sudah dibagikan ujian ini
       const res2 = await fetch(`http://localhost:8000/api/ujians/${ujian.id}/users`);
       if (!res2.ok) throw new Error(`HTTP ${res2.status} (assignedUsers)`);
       const json2 = await res2.json();
 
-      // Mapping assigned users ke format Peserta minimal
       const pesertaSudah: Peserta[] = json2.assigned_users.map((p: any) => ({
         ID_Peserta: p.id,
         Nama_Lengkap: p.name,
@@ -304,19 +342,17 @@ export default function DaftarUjianPage() {
         photo_url: null,
       }));
 
-      // Pisahkan peserta yang belum dibagikan (aktif & belum ada di pesertaSudah)
       const pesertaSudahEmails = new Set(pesertaSudah.map(p => p.Email));
       const pesertaBelum = pesertaAktif.filter(p => !pesertaSudahEmails.has(p.Email));
 
-      // Set state pesertaList dengan 2 array: belum dan sudah
       setPesertaList({
         belum: pesertaBelum,
         sudah: pesertaSudah,
       });
 
-      setSelectedEmails([]); // reset pilihan email
-      setSelectedUjian(ujian); // set ujian yang dipilih
-      setShowBagikanModal(true); // GUNAKAN showBagikanModal
+      setSelectedEmails([]);
+      setSelectedUjian(ujian);
+      setShowBagikanModal(true);
     } catch (err: any) {
       console.error('Error fetch peserta:', err);
       alert(`Gagal mengambil daftar peserta: ${err.message}`);
@@ -332,10 +368,8 @@ export default function DaftarUjianPage() {
   const kirim = async () => {
     if (!selectedUjian || selectedEmails.length === 0) return;
 
-    // Gabungkan peserta dari 'belum' dan 'sudah'
     const semuaPeserta = [...pesertaList.belum, ...pesertaList.sudah];
 
-    // Filter peserta yang emailnya terpilih (selectedEmails)
     const ids = semuaPeserta
       .filter((p) => selectedEmails.includes(p.Email))
       .map((p) => p.ID_Peserta);
@@ -348,7 +382,7 @@ export default function DaftarUjianPage() {
       });
       if (!res.ok) throw new Error('Gagal assign peserta');
       alert('Ujian Berhasil di bagikan.');
-      setShowBagikanModal(false); // GUNAKAN showBagikanModal
+      setShowBagikanModal(false);
     } catch (err) {
       console.error(err);
       alert('Gagal kirim notifikasi.');
@@ -365,11 +399,15 @@ export default function DaftarUjianPage() {
     </button>
   );
 
+  // Dapatkan nilai unik untuk dropdown filter
+  const uniqueStatuses = Array.from(new Set(dataUjian.map(u => u.status)));
+  const uniqueDurasi = Array.from(new Set(dataUjian.map(u => u.durasi))).sort((a, b) => a - b);
+  const uniqueJumlahSoal = Array.from(new Set(dataUjian.map(u => u.jumlahSoal))).sort((a, b) => a - b);
+
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
       {loading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
-          {/* Logo diam di tengah */}
           <div className="relative w-35 h-35">
             <div className="absolute inset-0 flex items-center justify-center">
               <img
@@ -378,19 +416,14 @@ export default function DaftarUjianPage() {
                 className="w-25 h-25 object-contain"
               />
             </div>
-
-            {/* Spinner berputar di belakang logo */}
             <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
           </div>
         </div>
       )}
       <div className="mb-6">
-        {/* Judul */}
         <h1 className="text-2xl font-bold mb-5">Daftar Ujian</h1>
 
-        {/* Tombol-tombol */}
-        <div className="flex flex-wrap gap-2">
-          {/* Tombol Kloning (DI LUAR TABEL) */}
+        <div className="flex flex-wrap gap-2 items-center">
           <button
             onClick={openCloneModal}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer"
@@ -399,7 +432,6 @@ export default function DaftarUjianPage() {
             Kloning
           </button>
 
-          {/* Tombol Buat Soal */}
           <button
             onClick={() => router.push('/admin/daftarUjian/buatSoal')}
             className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition text-sm font-medium cursor-pointer"
@@ -416,13 +448,121 @@ export default function DaftarUjianPage() {
             </svg>
             Buat Soal
           </button>
+
+          {/* Tombol Toggle Filter */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer ${
+              showFilters || hasActiveFilters
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-500 text-white hover:bg-gray-700'
+            }`}
+          >
+            <FunnelIcon className="w-5 h-5" />
+            Filter {hasActiveFilters && `(${Object.values(columnFilters).filter(v => v !== '').length})`}
+          </button>
+
+          {/* Tombol Reset Filter */}
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer"
+            >
+              <XMarkIcon className="w-5 h-5" />
+              Reset Filter
+            </button>
+          )}
         </div>
+
+        {/* Panel Filter */}
+        {showFilters && (
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <h3 className="font-semibold text-gray-700 mb-3 text-sm">Filter Kolom</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Filter Kode */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Kode Ujian</label>
+                <input
+                  type="text"
+                  value={columnFilters.kode}
+                  onChange={(e) => setColumnFilters({ ...columnFilters, kode: e.target.value })}
+                  placeholder="Cari kode..."
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Filter Nama */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nama Ujian</label>
+                <input
+                  type="text"
+                  value={columnFilters.nama}
+                  onChange={(e) => setColumnFilters({ ...columnFilters, nama: e.target.value })}
+                  placeholder="Cari nama..."
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Filter Status */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                <select
+                  value={columnFilters.status}
+                  onChange={(e) => setColumnFilters({ ...columnFilters, status: e.target.value })}
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Semua Status</option>
+                  {uniqueStatuses.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter Durasi */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Durasi (menit)</label>
+                <select
+                  value={columnFilters.durasi}
+                  onChange={(e) => setColumnFilters({ ...columnFilters, durasi: e.target.value })}
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Semua Durasi</option>
+                  {uniqueDurasi.map(durasi => (
+                    <option key={durasi} value={durasi}>{durasi} menit</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter Jumlah Soal */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Jumlah Soal</label>
+                <select
+                  value={columnFilters.jumlahSoal}
+                  onChange={(e) => setColumnFilters({ ...columnFilters, jumlahSoal: e.target.value })}
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Semua Jumlah</option>
+                  {uniqueJumlahSoal.map(jumlah => (
+                    <option key={jumlah} value={jumlah}>{jumlah} soal</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
         <p className="text-center py-6 text-gray-600">Loading...</p>
       ) : (
         <>
+          {/* Info hasil filter */}
+          {hasActiveFilters && (
+            <div className="mb-3 text-sm text-gray-600">
+              Menampilkan <span className="font-semibold">{filteredData.length}</span> dari <span className="font-semibold">{dataUjian.length}</span> ujian
+            </div>
+          )}
+
           <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
             <table className="min-w-full text-gray-800 text-sm border-collapse">
               <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
@@ -446,7 +586,7 @@ export default function DaftarUjianPage() {
                 {paginated.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-6 text-center text-gray-500">
-                      Belum ada ujian
+                      {hasActiveFilters ? 'Tidak ada ujian yang sesuai dengan filter' : 'Belum ada ujian'}
                     </td>
                   </tr>
                 ) : (
@@ -477,7 +617,6 @@ export default function DaftarUjianPage() {
                       </td>
                       <td className="text-center py-2">
                         <div className="flex flex-wrap justify-center gap-2">
-                          {/* Lihat Soal */}
                           <button
                             onClick={() => router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${u.id}`)}
                             className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition cursor-pointer"
@@ -486,7 +625,6 @@ export default function DaftarUjianPage() {
                             <EyeIconSolid className="w-4 h-4" />
                           </button>
 
-                          {/* Edit Ujian */}
                           <button
                             onClick={() => router.push(`/admin/daftarUjian/editUjian?ujian_id=${u.id}`)}
                             className="p-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded transition cursor-pointer"
@@ -495,7 +633,6 @@ export default function DaftarUjianPage() {
                             <PencilSquareIcon className="w-4 h-4" />
                           </button>
 
-                          {/* Hapus Ujian */}
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -507,7 +644,6 @@ export default function DaftarUjianPage() {
                             <TrashIcon className="w-4 h-4" />
                           </button>
 
-                          {/* Bagikan Ujian */}
                           <button
                             onClick={() => openBagikanModal(u)}
                             className="p-2 bg-green-700 hover:bg-green-800 text-white rounded transition cursor-pointer"
@@ -523,7 +659,6 @@ export default function DaftarUjianPage() {
               </tbody>
             </table>
           </div>
-          {/* Pagination */}
           <div className="flex justify-between items-center text-gray-600 text-sm mt-4">
             <button
               onClick={goToPrevious}
@@ -562,7 +697,6 @@ export default function DaftarUjianPage() {
               Bagikan Ujian: <span className="text-blue-700">{selectedUjian.nama}</span>
             </h2>
 
-            {/* Input Pencarian Peserta */}
             <input
               type="text"
               placeholder="Cari peserta berdasarkan nama atau email..."
@@ -571,7 +705,6 @@ export default function DaftarUjianPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
 
-            {/* Peserta Belum Dibagikan */}
             <div className="mb-2 text-sm text-gray-600">Peserta Belum Dibagikan:</div>
             <div className="border border-gray-300 rounded max-h-40 overflow-y-auto p-2 mb-4">
               {pesertaBelumFiltered.length === 0 ? (
@@ -596,7 +729,6 @@ export default function DaftarUjianPage() {
               )}
             </div>
 
-            {/* Peserta Sudah Dibagikan */}
             <div className="mb-2 text-sm text-gray-600">Peserta Sudah Dibagikan:</div>
             <div className="border border-gray-300 rounded max-h-40 overflow-y-auto p-2 mb-4 bg-gray-50">
               {pesertaSudahFiltered.length === 0 ? (
@@ -621,7 +753,6 @@ export default function DaftarUjianPage() {
               )}
             </div>
 
-            {/* Tombol Aksi */}
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowBagikanModal(false)}

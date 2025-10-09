@@ -227,7 +227,7 @@ export default function AdminDashboard() {
                       <SortArrow /> No
                     </div>
                   </th>
-                  <th className="px-4 py-3">ID Peserta</th>
+                  <th className="px-4 py-3">NIK</th>
                   <th className="px-4 py-3">Nama Lengkap</th>
                   <th className="px-4 py-3">Tanggal</th>
                   <th className="px-4 py-3">Nilai</th>

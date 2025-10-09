@@ -34,9 +34,11 @@
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dom": "^19",
     "@types/recharts": "^1.8.29",
+    "css-loader": "^7.1.2",
     "eslint": "^9",
     "eslint-config-next": "15.4.3",
     "eslint-formatter-compact": "^8.40.0",
+    "style-loader": "^4.0.0",
     "tailwindcss": "^4.1.12",
     "typescript": "^5"
   }

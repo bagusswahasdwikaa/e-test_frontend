@@ -77,99 +77,95 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#5E7798] flex flex-col items-center justify-center p-6 overflow-hidden">
-      {/* Background Rectangles */}
-      <div className="absolute bottom-20 right-16 w-24 h-24 bg-[#404040] opacity-40 rotate-45 rounded-lg z-0"></div>
+    <div className="relative min-h-screen flex items-center justify-center p-6 overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/assets/logo/bg-panasonic.jpg"
+          alt="Background"
+          fill
+          className="object-cover"
+          priority
+          quality={100}
+        />
+        {/* Overlay untuk membuat teks lebih terbaca */}
+        <div className="absolute inset-0 bg-black/40"></div>
+      </div>
 
-      {/* Main Container */}
-      <div className="flex flex-col md:flex-row items-center max-w-5xl w-full relative z-20">
-        {/* Left Image */}
-        <div className="w-full md:w-1/2 mb-8 md:mb-0 flex justify-center">
-          <Image
-            src="/assets/img/pic1.png"
-            alt="Ilustrasi"
-            width={350}
-            height={350}
-            className="object-contain relative z-10"
-          />
-        </div>
-
-        {/* Right Form */}
-        <div className="w-full md:w-1/2 flex flex-col items-center px-4 md:px-8">
-          <div className="w-full backdrop-blur-md bg-white/30 rounded-xl p-6 shadow-lg">
-            <h2 className="text-2xl font-bold text-center text-white mb-9">Daftar P-TEST</h2>
-            <form onSubmit={handleSubmit} className="flex flex-col space-y-6 w-full">
-              <input
-                type="number"
-                name="id"
-                placeholder="ID"
-                value={form.id}
-                onChange={handleChange}
-                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-                required
-              />
-              <input
-                type="text"
-                name="firstName"
-                placeholder="Nama Depan"
-                value={form.firstName}
-                onChange={handleChange}
-                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-                pattern="[A-Za-z]+"
-                required
-              />
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Nama Belakang"
-                value={form.lastName}
-                onChange={handleChange}
-                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-                pattern="[A-Za-z]+"
-                required
-              />
-
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-                required
-              />
-              <input
-                type="password"
-                name="password"
-                placeholder="Kata Sandi"
-                value={form.password}
-                onChange={handleChange}
-                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-                required
-              />
-              <input
-                type="password"
-                name="password_confirmation"
-                placeholder="Konfirmasi Kata Sandi"
-                value={form.password_confirmation}
-                onChange={handleChange}
-                className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-                required
-              />
-              <button
-                type="submit"
-                className="w-full bg-[#02030E] text-white font-semibold py-2 rounded-xl hover:opacity-90 transition cursor-pointer"
-              >
-                Daftar
-              </button>
-            </form>
-            <p className="mt-4 text-center text-sm text-white">
-              Sudah punya akun?{' '}
-              <Link href="/authentication/login" className="underline hover:text-gray-300">
-                Masuk
-              </Link>
-            </p>
-          </div>
+      {/* Form Container - Centered */}
+      <div className="w-full max-w-md relative z-20">
+        <div className="w-full backdrop-blur-md bg-white/30 rounded-xl p-8 shadow-lg">
+          <h2 className="text-2xl font-bold text-center text-white mb-9">Daftar PGLSMID e-test</h2>
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-6 w-full">
+            <input
+              type="number"
+              name="id"
+              placeholder="ID"
+              value={form.id}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+              required
+            />
+            <input
+              type="text"
+              name="firstName"
+              placeholder="Nama Depan"
+              value={form.firstName}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+              pattern="[A-Za-z]+"
+              required
+            />
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Nama Belakang"
+              value={form.lastName}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+              pattern="[A-Za-z]+"
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+              required
+            />
+            <input
+              type="password"
+              name="password"
+              placeholder="Kata Sandi"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+              required
+            />
+            <input
+              type="password"
+              name="password_confirmation"
+              placeholder="Konfirmasi Kata Sandi"
+              value={form.password_confirmation}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+              required
+            />
+            <button
+              type="submit"
+              className="w-full bg-[#02030E] text-white font-semibold py-2 rounded-xl hover:opacity-90 transition cursor-pointer"
+            >
+              Daftar
+            </button>
+          </form>
+          <p className="mt-4 text-center text-sm text-white">
+            Sudah punya akun?{' '}
+            <Link href="/authentication/login" className="underline hover:text-gray-300">
+              Masuk
+            </Link>
+          </p>
         </div>
       </div>
     </div>
