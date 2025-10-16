@@ -16,13 +16,17 @@ export interface ExamResult {
   status: string;
 }
 
+type SortField = 'user_id' | 'nama_lengkap' | 'tanggal' | 'nilai' | 'nama_ujian' | 'status';
+type SortDirection = 'asc' | 'desc' | null;
+
 export default function AdminDashboard() {
   const [examData, setExamData] = useState<ExamResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const [monthRange, setMonthRange] = useState<[Date | null, Date | null]>([null, null]);
   const [filterStatus, setFilterStatus] = useState('');
@@ -53,8 +57,50 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, [API_BASE_URL]);
 
-  const toggleSort = () =>
-    setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+  // Fungsi untuk handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Fungsi untuk render icon sorting
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return (
+        <span className="ml-1 text-gray-400">
+          <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+        </span>
+      );
+    }
+    if (sortDirection === 'asc') {
+      return (
+        <span className="ml-1">
+          <svg className="w-3.5 h-3.5 inline" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+        </span>
+      );
+    }
+    return (
+      <span className="ml-1">
+        <svg className="w-3.5 h-3.5 inline" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </span>
+    );
+  };
 
   // Validasi maksimal rentang 6 bulan
   const isValidMonthRange = (start: Date | null, end: Date | null): boolean => {
@@ -96,14 +142,48 @@ export default function AdminDashboard() {
     return matchesSearch && matchesMonth && matchesStatus;
   });
 
-  // Sorting berdasarkan user_id
+  // Sorting data
   const sortedData = useMemo(() => {
+    if (!sortField || !sortDirection) return filteredData;
+
     return [...filteredData].sort((a, b) => {
-      if (a.user_id < b.user_id) return sortDirection === 'asc' ? -1 : 1;
-      if (a.user_id > b.user_id) return sortDirection === 'asc' ? 1 : -1;
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'user_id':
+          aValue = a.user_id;
+          bValue = b.user_id;
+          break;
+        case 'nama_lengkap':
+          aValue = a.nama_lengkap.toLowerCase();
+          bValue = b.nama_lengkap.toLowerCase();
+          break;
+        case 'tanggal':
+          aValue = a.tanggal ? new Date(a.tanggal).getTime() : 0;
+          bValue = b.tanggal ? new Date(b.tanggal).getTime() : 0;
+          break;
+        case 'nilai':
+          aValue = a.nilai ?? -1;
+          bValue = b.nilai ?? -1;
+          break;
+        case 'nama_ujian':
+          aValue = (a.nama_ujian || '').toLowerCase();
+          bValue = (b.nama_ujian || '').toLowerCase();
+          break;
+        case 'status':
+          aValue = a.status.toLowerCase();
+          bValue = b.status.toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredData, sortDirection]);
+  }, [filteredData, sortField, sortDirection]);
 
   // Pagination
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
@@ -120,18 +200,10 @@ export default function AdminDashboard() {
     window.open(exportUrl, '_blank');
   };
 
-  const SortArrow = () => (
-    <button onClick={toggleSort} aria-label="Toggle sort" className="select-none" type="button">
-      {sortDirection === 'asc' ? '▲' : '▼'}
-    </button>
-  );
-
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
-      {/* Loading Overlay sama persis dengan admin/daftarPeserta/page.tsx */}
       {loading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
-          {/* Logo diam di tengah */}
           <div className="relative w-35 h-35">
             <div className="absolute inset-0 flex items-center justify-center">
               <img
@@ -140,8 +212,6 @@ export default function AdminDashboard() {
                 className="w-25 h-25 object-contain"
               />
             </div>
-
-            {/* Spinner berputar di belakang logo */}
             <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
           </div>
         </div>
@@ -222,17 +292,61 @@ export default function AdminDashboard() {
             <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
               <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
                 <tr>
-                  <th className="px-4 py-3 text-center w-12">
-                    <div className="flex items-center justify-center gap-1">
-                      <SortArrow /> No
+                  <th className="px-4 py-3 text-center w-12">No</th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('user_id')}
+                  >
+                    <div className="flex items-center justify-center">
+                      NIK
+                      {renderSortIcon('user_id')}
                     </div>
                   </th>
-                  <th className="px-4 py-3">NIK</th>
-                  <th className="px-4 py-3">Nama Lengkap</th>
-                  <th className="px-4 py-3">Tanggal</th>
-                  <th className="px-4 py-3">Nilai</th>
-                  <th className="px-4 py-3">Nama Ujian</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('nama_lengkap')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Nama Lengkap
+                      {renderSortIcon('nama_lengkap')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('tanggal')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Tanggal
+                      {renderSortIcon('tanggal')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('nilai')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Nilai
+                      {renderSortIcon('nilai')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('nama_ujian')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Nama Ujian
+                      {renderSortIcon('nama_ujian')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Status
+                      {renderSortIcon('status')}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -286,13 +400,13 @@ export default function AdminDashboard() {
               Sebelumnya
             </button>
             <span>
-              Halaman {currentPage} dari {totalPages}
+              Halaman {currentPage} dari {totalPages || 1}
             </span>
             <button
               onClick={goToNextPage}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || totalPages === 0}
               className={`${
-                currentPage === totalPages
+                currentPage === totalPages || totalPages === 0
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               } px-3 py-1 rounded`}

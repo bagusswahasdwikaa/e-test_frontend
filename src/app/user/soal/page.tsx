@@ -28,6 +28,8 @@ export default function SoalPage() {
   const [nilai, setNilai] = useState<number | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [timer, setTimer] = useState<number>(0);
+  const [allowRetry, setAllowRetry] = useState(false); // ✅ tambahkan state baru
+  const [action, setAction] = useState<string | null>(null); // ✅ tambahkan state baru
 
   const router = useRouter();
   const timerActiveRef = useRef(true);
@@ -80,6 +82,9 @@ export default function SoalPage() {
 
       if (res.data?.success) {
         setNilai(res.data.nilai);
+        setAllowRetry(res.data.allow_retry ?? false); // ✅ ambil dari backend
+        setAction(res.data.action ?? null); // ✅ ambil dari backend
+
         localStorage.removeItem('ujian_id');
         localStorage.removeItem('kode_soal');
         localStorage.removeItem('started_at');
@@ -105,6 +110,15 @@ export default function SoalPage() {
     } finally {
       setSubmitLoading(false);
     }
+  };
+
+  // === Ulang Ujian ===
+  const handleUlangUjian = () => {
+    localStorage.removeItem('ujian_id');
+    localStorage.removeItem('kode_soal');
+    localStorage.removeItem('started_at');
+    localStorage.removeItem('end_time');
+    router.push('/user/dashboard'); // arahkan kembali ke dashboard
   };
 
   // === Ambil soal & timer dari backend ===
@@ -189,7 +203,7 @@ export default function SoalPage() {
             media_url: item.media_url,
             media_type: item.media_type,
             jawabans: item.jawabans,
-            jawaban_terpilih: item.jawaban_user ?? null, // <-- ambil jawaban lama dari backend
+            jawaban_terpilih: item.jawaban_user ?? null, // ambil jawaban lama dari backend
           }))
         );
       } catch (error: any) {
@@ -233,7 +247,6 @@ export default function SoalPage() {
       )
     );
 
-    // Simpan langsung ke backend
     if (soalSekarang) {
       saveJawaban(soalSekarang.soal_id, jawabanId);
     }
@@ -254,16 +267,15 @@ export default function SoalPage() {
   };
 
   const soal = soalList[currentIndex];
-
-  // Progress bar calculation
   const progress = soalList.length > 0 ? ((currentIndex + 1) / soalList.length) * 100 : 0;
-  const answeredCount = soalList.filter(s => s.jawaban_terpilih !== null && s.jawaban_terpilih !== undefined).length;
+  const answeredCount = soalList.filter(
+    (s) => s.jawaban_terpilih !== null && s.jawaban_terpilih !== undefined
+  ).length;
 
-  // Timer color based on remaining time
   const getTimerColor = () => {
-    if (timer > 600) return 'text-green-600'; // > 10 minutes
-    if (timer > 300) return 'text-yellow-600'; // > 5 minutes
-    return 'text-red-600'; // < 5 minutes
+    if (timer > 600) return 'text-green-600';
+    if (timer > 300) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   return (
@@ -304,32 +316,38 @@ export default function SoalPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
+
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">Ujian Selesai!</h2>
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6">
                   <p className="text-lg text-gray-700 mb-2">Nilai Anda:</p>
                   <p className="text-4xl font-bold text-blue-600">{nilai ?? 'Belum tersedia'}</p>
                 </div>
-                <p className="text-gray-600 mb-6">
-                  Selamat! Anda telah menyelesaikan ujian dengan baik.
-                </p>
-                <button
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                  onClick={() => router.push('/user/hasil')}
-                >
-                  Lihat Detail Hasil Ujian
-                </button>
-              </div>
-            </div>
-          ) : soalList.length === 0 ? (
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md w-full">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <p className="text-lg font-medium text-gray-700">Tidak ada soal tersedia</p>
-                <p className="text-sm text-gray-500 mt-2">Silakan hubungi administrator</p>
+
+                {allowRetry ? (
+                  <>
+                    <p className="text-red-600 font-medium mb-6">
+                      Nilai Anda belum memenuhi standar minimal. Silakan ulang ujian.
+                    </p>
+                    <button
+                      onClick={handleUlangUjian}
+                      className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                    >
+                      Ulang Ujian
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-600 mb-6">
+                      Selamat! Anda telah menyelesaikan ujian dengan baik.
+                    </p>
+                    <button
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                      onClick={() => router.push('/user/hasil')}
+                    >
+                      Lihat Detail Hasil Ujian
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ) : (

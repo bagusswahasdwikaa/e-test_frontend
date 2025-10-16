@@ -9,12 +9,14 @@ type StatusType = 'Aktif' | 'Non Aktif';
 interface UjianData {
   id_ujian: number;
   nama_ujian: string;
-  tanggal_mulai: string; // Format: 'YYYY-MM-DDTHH:mm'
-  tanggal_akhir: string; // Format: 'YYYY-MM-DDTHH:mm'
+  tanggal_mulai: string; // 'YYYY-MM-DDTHH:mm'
+  tanggal_akhir: string;
   durasi: number;
   jumlah_soal: number;
   kode_soal: string;
   status: StatusType;
+  jenis_ujian: 'PRETEST' | 'POSTEST';
+  standar_minimal_nilai?: number | null;
 }
 
 export default function EditUjianPage() {
@@ -57,6 +59,8 @@ export default function EditUjianPage() {
           jumlah_soal: data.jumlah_soal,
           kode_soal: data.kode_soal,
           status: data.status as StatusType,
+          jenis_ujian: data.jenis_ujian,
+          standar_minimal_nilai: data.standar_minimal_nilai ?? null,
         });
       } catch (error) {
         console.error('Fetch error:', error);
@@ -70,9 +74,13 @@ export default function EditUjianPage() {
     fetchUjian();
   }, [ujianId, router]);
 
-  const handleChange = (field: keyof Omit<UjianData, 'id_ujian'>, value: any) => {
+  const handleChange = (field: keyof UjianData, value: any) => {
     if (!ujian) return;
-    setUjian({ ...ujian, [field]: value });
+    if (field === 'jenis_ujian' && value === 'PRETEST') {
+      setUjian({ ...ujian, [field]: value, standar_minimal_nilai: null });
+    } else {
+      setUjian({ ...ujian, [field]: value });
+    }
   };
 
   const handleSubmit = async () => {
@@ -95,9 +103,26 @@ export default function EditUjianPage() {
         return;
       }
 
-      const formatDateTime = (value: string) => {
-        return value.replace('T', ' ') + ':00';
-      };
+      if (
+        ujian.jenis_ujian === 'POSTEST' &&
+        (ujian.standar_minimal_nilai == null || isNaN(ujian.standar_minimal_nilai!))
+      ) {
+        alert('Standar minimal nilai wajib diisi untuk POSTEST.');
+        setSaving(false);
+        return;
+      }
+
+      if (
+        ujian.jenis_ujian === 'PRETEST' &&
+        ujian.standar_minimal_nilai !== null
+      ) {
+        alert('Standar minimal nilai tidak boleh diisi untuk PRETEST.');
+        setSaving(false);
+        return;
+      }
+
+
+      const formatDateTime = (value: string) => value.replace('T', ' ') + ':00';
 
       const payload = {
         nama_ujian: ujian.nama_ujian,
@@ -106,7 +131,14 @@ export default function EditUjianPage() {
         durasi: ujian.durasi,
         jumlah_soal: ujian.jumlah_soal,
         kode_soal: ujian.kode_soal,
+        jenis_ujian: ujian.jenis_ujian,
+        standar_minimal_nilai: ujian.standar_minimal_nilai,
       };
+
+
+      if (ujian.jenis_ujian === 'POSTEST') {
+        payload.standar_minimal_nilai = ujian.standar_minimal_nilai;
+      }
 
       const res = await fetch(`http://localhost:8000/api/ujians/${ujian.id_ujian}`, {
         method: 'PUT',
@@ -125,8 +157,6 @@ export default function EditUjianPage() {
       }
 
       alert('Ujian berhasil diperbarui!');
-
-      // Redirect ke halaman editSoal dengan query jumlah_soal
       router.push(
         `/admin/daftarUjian/editUjian/editSoal?ujian_id=${ujian.id_ujian}&jumlah_soal=${ujian.jumlah_soal}`
       );
@@ -153,6 +183,29 @@ export default function EditUjianPage() {
             type="text"
             value={ujian.nama_ujian}
             onChange={e => handleChange('nama_ujian', e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Kode Soal */}
+        <div>
+          <label className="block mb-1 font-semibold">Kode Soal</label>
+          <input
+            type="text"
+            value={ujian.kode_soal}
+            onChange={e => handleChange('kode_soal', e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Jumlah Soal */}
+        <div>
+          <label className="block mb-1 font-semibold">Jumlah Soal</label>
+          <input
+            type="number"
+            min={1}
+            value={ujian.jumlah_soal}
+            onChange={e => handleChange('jumlah_soal', Number(e.target.value))}
             className="w-full border rounded px-3 py-2"
           />
         </div>
@@ -191,31 +244,39 @@ export default function EditUjianPage() {
           />
         </div>
 
-        {/* Jumlah Soal */}
-        <div>
-          <label className="block mb-1 font-semibold">Jumlah Soal</label>
-          <input
-            type="number"
-            min={1}
-            value={ujian.jumlah_soal}
-            onChange={e => handleChange('jumlah_soal', Number(e.target.value))}
+        {/* Jenis Ujian */}
+       <div>
+          <label className="block mb-1 font-semibold">Jenis Ujian</label>
+          <select
+            value={ujian.jenis_ujian}
+            onChange={e => handleChange('jenis_ujian', e.target.value as 'PRETEST' | 'POSTEST')}
             className="w-full border rounded px-3 py-2"
-          />
-          {ujian.jumlah_soal < 1 && (
-            <p className="text-red-500 text-sm mt-1">Jumlah soal minimal 1.</p>
-          )}
+          >
+            <option value="PRETEST">Pre Test</option>
+            <option value="POSTEST">Post Test</option>
+          </select>
         </div>
 
-        {/* Kode Soal */}
-        <div>
-          <label className="block mb-1 font-semibold">Kode Soal</label>
-          <input
-            type="text"
-            value={ujian.kode_soal}
-            onChange={e => handleChange('kode_soal', e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
+        {/* Standar Minimal Nilai (hanya jika POSTEST) */}
+        {ujian.jenis_ujian === 'POSTEST' && (
+          <div>
+            <label className="block mb-1 font-semibold">Standar Minimal Nilai</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={ujian.standar_minimal_nilai ?? ''}
+              onChange={e =>
+                handleChange(
+                  'standar_minimal_nilai',
+                  e.target.value === '' ? null : Number(e.target.value)
+                )
+              }
+              className="w-full border rounded px-3 py-2"
+              placeholder="Contoh: 75"
+            />
+          </div>
+        )}
 
         {/* Tombol Aksi */}
         <div className="flex justify-between mt-6">

@@ -12,6 +12,7 @@ export default function TambahPesertaPage() {
     first_name: '',
     last_name: '',
     email: '',
+    instansi: '',
     password: '',
     password_confirmation: '',
     status: 'aktif',
@@ -65,6 +66,7 @@ export default function TambahPesertaPage() {
         first_name: '',
         last_name: '',
         email: '',
+        instansi: '',
         password: '',
         password_confirmation: '',
         status: 'aktif',
@@ -136,6 +138,19 @@ export default function TambahPesertaPage() {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2 text-sm"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Sekolah/Departemen</label>
+            <input
+              type="text"
+              name="instansi"
+              value={formData.instansi}
+              onChange={handleChange}
+              className="w-full border rounded px-3 py-2 text-sm"
+              required
+              maxLength={100}
             />
           </div>
 

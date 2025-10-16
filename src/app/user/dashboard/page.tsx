@@ -15,6 +15,8 @@ interface Ujian {
   status_peserta: string;
   started_at?: string | null;
   end_time?: string | null;
+  jenis_ujian: 'PRETEST' | 'POSTEST';
+  standar_minimal_nilai?: number | null;
 }
 
 export default function UserDashboardPage() {
@@ -30,7 +32,6 @@ export default function UserDashboardPage() {
   const [kodeInput, setKodeInput] = useState('');
   const [kodeError, setKodeError] = useState('');
 
-  // 🔄 Ambil data ujian user
   const fetchUjian = useCallback(async () => {
     try {
       setLoading(true);
@@ -59,6 +60,8 @@ export default function UserDashboardPage() {
           status_peserta: item.status_peserta,
           started_at: item.started_at ?? null,
           end_time: item.end_time ?? null,
+          jenis_ujian: ujian.jenis_ujian ?? 'PRETEST',
+          standar_minimal_nilai: ujian.standar_minimal_nilai ?? null,
         };
       });
 
@@ -84,7 +87,6 @@ export default function UserDashboardPage() {
 
     fetchUjian();
 
-    // 👂 Dengarkan event perubahan localStorage (misalnya setelah submit)
     const handleStorageUpdate = (e: StorageEvent) => {
       if (e.key === 'ujian_submitted') {
         fetchUjian();
@@ -122,13 +124,10 @@ export default function UserDashboardPage() {
       );
 
       if (response.data.success) {
-        // ✅ Simpan data ke localStorage untuk dipakai di halaman soal
         localStorage.setItem('ujian_id', selectedUjian.ujian_id.toString());
         localStorage.setItem('kode_soal', kodeInput);
         localStorage.setItem('started_at', response.data.started_at);
         localStorage.setItem('end_time', response.data.end_time);
-
-        // flag supaya dashboard reload setelah submit
         localStorage.setItem('ujian_submitted', 'pending');
 
         router.push('/user/soal');
@@ -136,7 +135,6 @@ export default function UserDashboardPage() {
         setKodeError(response.data.message || 'Kode soal salah.');
       }
     } catch (error: any) {
-      // ❌ Jangan munculin AxiosError merah
       let message = 'Kode soal salah.';
       if (error.response?.data?.errors?.kode_soal) {
         message = error.response.data.errors.kode_soal[0];
@@ -195,26 +193,36 @@ export default function UserDashboardPage() {
                     <h2 className="text-xl font-bold mb-3">{ujian.nama}</h2>
                     <div className="text-sm text-gray-700 space-y-1">
                       <div className="flex">
-                        <span className="w-25">Waktu</span>
+                        <span className="w-32">Jenis Ujian</span>
+                        <span>: {ujian.jenis_ujian === 'PRETEST' ? 'Pre Test' : 'Post Test'}</span>
+                      </div>
+
+                      {ujian.jenis_ujian === 'POSTEST' && ujian.standar_minimal_nilai != null && (
+                        <div className="flex">
+                          <span className="w-32">Standar Nilai</span>
+                          <span>: {ujian.standar_minimal_nilai}</span>
+                        </div>
+                      )}
+
+                      <div className="flex">
+                        <span className="w-32">Waktu</span>
                         <span>: {ujian.durasi} Menit</span>
                       </div>
                       <div className="flex">
-                        <span className="w-25">Jumlah Soal</span>
+                        <span className="w-32">Jumlah Soal</span>
                         <span>: {ujian.jumlah_soal}</span>
                       </div>
                       <div className="flex">
-                        <span className="w-25">Status Peserta</span>
+                        <span className="w-32">Status Peserta</span>
                         <span>
                           :{' '}
-                          <span
-                            className={`font-semibold ${statusPesertaColor}`}
-                          >
+                          <span className={`font-semibold ${statusPesertaColor}`}>
                             {statusPeserta}
                           </span>
                         </span>
                       </div>
                       <div className="flex mt-5">
-                        <span className="w-25">Status Ujian</span>
+                        <span className="w-32">Status Ujian</span>
                         <span>
                           :{' '}
                           <span
@@ -226,9 +234,7 @@ export default function UserDashboardPage() {
                                 : 'text-red-500'
                             }`}
                           >
-                            {ujian.status === 'Selesai'
-                              ? 'Berakhir'
-                              : ujian.status}
+                            {ujian.status === 'Selesai' ? 'Berakhir' : ujian.status}
                           </span>
                         </span>
                       </div>
@@ -263,12 +269,11 @@ export default function UserDashboardPage() {
           </div>
         )}
 
-        {/* Modal Verifikasi Kode */}
         {showModal && selectedUjian && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
               <h2 className="text-lg font-semibold mb-4">
-                Masukkan Kode Soal untuk "{selectedUjian.nama}"
+                Masukkan Kode Soal untuk &quot;{selectedUjian.nama}&quot;
               </h2>
               <input
                 type="text"

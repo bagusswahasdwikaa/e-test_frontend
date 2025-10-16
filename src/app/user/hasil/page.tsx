@@ -2,16 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import UserLayout from '@/components/UserLayout';
-import axios from '@/services/axios'; // pastikan axios sudah dikonfigurasi
+import axios from '@/services/axios';
 
 interface RingkasanHasil {
   nama_ujian: string;
   hasil: {
     nilai: number;
     status: string;
-    waktu_selesai: string | null; // format 'd-m-Y H:i:s'
+    waktu_selesai: string | null;
   } | null;
 }
+
+type SortField = 'nama_ujian' | 'waktu_selesai' | 'nilai' | 'status';
+type SortDirection = 'asc' | 'desc' | null;
 
 export default function HasilPage() {
   const [hasilList, setHasilList] = useState<RingkasanHasil[]>([]);
@@ -20,6 +23,9 @@ export default function HasilPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   useEffect(() => {
     async function fetchHasil() {
@@ -43,7 +49,6 @@ export default function HasilPage() {
     fetchHasil();
   }, []);
 
-  // parsing tanggal backend format d-m-Y H:i:s ke Date
   function parseBackendDate(dateStr: string | null): Date | null {
     if (!dateStr) return null;
     const [datePart, timePart] = dateStr.split(' ');
@@ -63,9 +68,93 @@ export default function HasilPage() {
     });
   };
 
-  // Pagination tanpa filter dan sorting
-  const totalPages = Math.ceil(hasilList.length / itemsPerPage);
-  const paginatedData = hasilList.slice(
+  // Fungsi untuk handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1); // Reset ke halaman pertama saat sorting
+  };
+
+  // Fungsi untuk render icon sorting
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return (
+        <span className="ml-1 text-gray-400">
+          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+        </span>
+      );
+    }
+    if (sortDirection === 'asc') {
+      return (
+        <span className="ml-1">
+          <svg className="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+        </span>
+      );
+    }
+    return (
+      <span className="ml-1">
+        <svg className="w-4 h-4 inline" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </span>
+    );
+  };
+
+  // Sort data
+  const sortedData = [...hasilList].sort((a, b) => {
+    if (!sortField || !sortDirection) return 0;
+
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortField) {
+      case 'nama_ujian':
+        aValue = a.nama_ujian.toLowerCase();
+        bValue = b.nama_ujian.toLowerCase();
+        break;
+      case 'waktu_selesai':
+        aValue = parseBackendDate(a.hasil?.waktu_selesai || null);
+        bValue = parseBackendDate(b.hasil?.waktu_selesai || null);
+        // Handle null dates - push them to the end
+        if (!aValue && !bValue) return 0;
+        if (!aValue) return 1;
+        if (!bValue) return -1;
+        aValue = aValue.getTime();
+        bValue = bValue.getTime();
+        break;
+      case 'nilai':
+        aValue = a.hasil?.nilai ?? -1;
+        bValue = b.hasil?.nilai ?? -1;
+        break;
+      case 'status':
+        aValue = a.hasil?.status || 'Belum Dikerjakan';
+        bValue = b.hasil?.status || 'Belum Dikerjakan';
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const paginatedData = sortedData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -77,7 +166,6 @@ export default function HasilPage() {
     <UserLayout>
       {loading && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
-          {/* Logo diam di tengah */}
           <div className="relative w-35 h-35">
             <div className="absolute inset-0 flex items-center justify-center">
               <img
@@ -86,8 +174,6 @@ export default function HasilPage() {
                 className="w-25 h-25 object-contain"
               />
             </div>
-
-            {/* Spinner berputar di belakang logo */}
             <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
           </div>
         </div>
@@ -105,10 +191,42 @@ export default function HasilPage() {
                 <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
                   <tr>
                     <th className="px-4 py-3 text-center w-12">No</th>
-                    <th className="px-4 py-3">Nama Ujian</th>
-                    <th className="px-4 py-3">Waktu Selesai</th>
-                    <th className="px-4 py-3 text-center">Nilai</th>
-                    <th className="px-4 py-3 text-center">Status</th>
+                    <th 
+                      className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                      onClick={() => handleSort('nama_ujian')}
+                    >
+                      <div className="flex items-center justify-center">
+                        Nama Ujian
+                        {renderSortIcon('nama_ujian')}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 cursor-pointer hover:bg-blue-800 transition-colors"
+                      onClick={() => handleSort('waktu_selesai')}
+                    >
+                      <div className="flex items-center justify-center">
+                        Waktu Selesai
+                        {renderSortIcon('waktu_selesai')}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                      onClick={() => handleSort('nilai')}
+                    >
+                      <div className="flex items-center justify-center">
+                        Nilai
+                        {renderSortIcon('nilai')}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center justify-center">
+                        Status
+                        {renderSortIcon('status')}
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,7 +254,9 @@ export default function HasilPage() {
                             {(currentPage - 1) * itemsPerPage + idx + 1}
                           </td>
                           <td className="px-4 py-2 text-center">{item.nama_ujian}</td>
-                          <td className="px-4 py-2 text-center">{formatDateTime(item.hasil?.waktu_selesai || null)}</td>
+                          <td className="px-4 py-2 text-center">
+                            {formatDateTime(item.hasil?.waktu_selesai || null)}
+                          </td>
                           <td className="px-4 py-2 text-center">{item.hasil?.nilai ?? '-'}</td>
                           <td className="px-4 py-2 text-center">
                             <span

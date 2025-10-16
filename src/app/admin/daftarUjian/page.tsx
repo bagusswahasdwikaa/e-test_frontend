@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
-import { ShareIcon, PencilSquareIcon, TrashIcon, EyeIcon, DocumentDuplicateIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ShareIcon, PencilSquareIcon, TrashIcon, DocumentDuplicateIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
 
 interface Ujian {
@@ -15,6 +15,7 @@ interface Ujian {
   status: 'Aktif' | 'Tidak Aktif';
   kode: string;
   jumlahSoal: number;
+  jenis_ujian: string;
 }
 
 interface Peserta {
@@ -30,7 +31,8 @@ interface PesertaList {
   sudah: Peserta[];
 }
 
-type SortDirection = 'asc' | 'desc';
+type SortField = 'id' | 'nama' | 'kode' | 'jenis_ujian' | 'tanggal_mulai' | 'tanggal_akhir' | 'durasi' | 'jumlahSoal' | 'status';
+type SortDirection = 'asc' | 'desc' | null;
 
 interface ColumnFilters {
   kode: string;
@@ -38,6 +40,7 @@ interface ColumnFilters {
   status: string;
   durasi: string;
   jumlahSoal: string;
+  jenis_ujian: string;
 }
 
 export default function DaftarUjianPage() {
@@ -47,7 +50,9 @@ export default function DaftarUjianPage() {
   const [searchPeserta, setSearchPeserta] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -67,11 +72,11 @@ export default function DaftarUjianPage() {
   const [kodeSoalBaru, setKodeSoalBaru] = useState('');
   const [loadingClone, setLoadingClone] = useState(false);
 
-  // State untuk filter kolom
   const [showFilters, setShowFilters] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFilters>({
     kode: '',
     nama: '',
+    jenis_ujian: '',
     status: '',
     durasi: '',
     jumlahSoal: '',
@@ -115,6 +120,7 @@ export default function DaftarUjianPage() {
           durasi: Number(item.durasi) || 0,
           status: hitungStatus(item.tanggal_mulai, item.tanggal_akhir),
           kode: item.kode_soal,
+          jenis_ujian: item.jenis_ujian || '—',
           jumlahSoal: Number(item.jumlah_soal) || 0,
         }));
         setDataUjian(mapped);
@@ -142,10 +148,51 @@ export default function DaftarUjianPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleToggleSort = () =>
-    setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+  // Fungsi untuk handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortDirection(null);
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
 
-  // Reset semua filter
+  // Fungsi untuk render icon sorting
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return (
+        <span className="ml-1 text-gray-400">
+          <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+          </svg>
+        </span>
+      );
+    }
+    if (sortDirection === 'asc') {
+      return (
+        <span className="ml-1">
+          <svg className="w-3.5 h-3.5 inline" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+        </span>
+      );
+    }
+    return (
+      <span className="ml-1">
+        <svg className="w-3.5 h-3.5 inline" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </span>
+    );
+  };
+
   const resetFilters = () => {
     setColumnFilters({
       kode: '',
@@ -153,21 +200,18 @@ export default function DaftarUjianPage() {
       status: '',
       durasi: '',
       jumlahSoal: '',
+      jenis_ujian: '',
     });
   };
 
-  // Cek apakah ada filter aktif
   const hasActiveFilters = Object.values(columnFilters).some(val => val !== '');
 
-  // Filter data berdasarkan search term dan column filters
   const filteredData = dataUjian.filter((u) => {
-    // Filter berdasarkan search term global
     const matchSearch = u.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.kode.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (!matchSearch) return false;
 
-    // Filter berdasarkan kolom-kolom spesifik
     if (columnFilters.kode && !u.kode.toLowerCase().includes(columnFilters.kode.toLowerCase())) {
       return false;
     }
@@ -188,6 +232,10 @@ export default function DaftarUjianPage() {
       return false;
     }
 
+    if (columnFilters.jenis_ujian && u.jenis_ujian.toString() !== columnFilters.jenis_ujian) {
+      return false;
+    }
+
     return true;
   });
 
@@ -203,11 +251,60 @@ export default function DaftarUjianPage() {
   const pesertaBelumFiltered = filterPeserta(pesertaList.belum);
   const pesertaSudahFiltered = filterPeserta(pesertaList.sudah);
 
+  // Sorting data
   const sortedData = React.useMemo(() => {
+    if (!sortField || !sortDirection) return filteredData;
+
     return [...filteredData].sort((a, b) => {
-      return sortDirection === 'asc' ? a.id - b.id : b.id - a.id;
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'id':
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        case 'nama':
+          aValue = a.nama.toLowerCase();
+          bValue = b.nama.toLowerCase();
+          break;
+        case 'kode':
+          aValue = a.kode.toLowerCase();
+          bValue = b.kode.toLowerCase();
+          break;
+        case 'jenis_ujian':
+          aValue = a.jenis_ujian.toLowerCase();
+          bValue = b.jenis_ujian.toLowerCase();
+          break;
+        case 'tanggal_mulai':
+          aValue = new Date(a.tanggal_mulai).getTime();
+          bValue = new Date(b.tanggal_mulai).getTime();
+          break;
+        case 'tanggal_akhir':
+          aValue = new Date(a.tanggal_akhir).getTime();
+          bValue = new Date(b.tanggal_akhir).getTime();
+          break;
+        case 'durasi':
+          aValue = a.durasi;
+          bValue = b.durasi;
+          break;
+        case 'jumlahSoal':
+          aValue = a.jumlahSoal;
+          bValue = b.jumlahSoal;
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
-  }, [filteredData, sortDirection]);
+  }, [filteredData, sortField, sortDirection]);
 
   const totalPages = Math.ceil(sortedData.length / itemsPerPage);
   const paginated = sortedData.slice(
@@ -389,20 +486,10 @@ export default function DaftarUjianPage() {
     }
   };
 
-  const SortArrow = () => (
-    <button
-      onClick={handleToggleSort}
-      aria-label="Toggle sort"
-      className="select-none text-white text-xs"
-    >
-      {sortDirection === 'asc' ? '▲' : '▼'}
-    </button>
-  );
-
-  // Dapatkan nilai unik untuk dropdown filter
   const uniqueStatuses = Array.from(new Set(dataUjian.map(u => u.status)));
   const uniqueDurasi = Array.from(new Set(dataUjian.map(u => u.durasi))).sort((a, b) => a - b);
   const uniqueJumlahSoal = Array.from(new Set(dataUjian.map(u => u.jumlahSoal))).sort((a, b) => a - b);
+  const uniqueJenisUjian = Array.from(new Set(dataUjian.map(u => u.jenis_ujian)));
 
   return (
     <AdminLayout searchTerm={searchTerm} setSearchTerm={setSearchTerm}>
@@ -449,7 +536,6 @@ export default function DaftarUjianPage() {
             Buat Soal
           </button>
 
-          {/* Tombol Toggle Filter */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer ${
@@ -462,7 +548,6 @@ export default function DaftarUjianPage() {
             Filter {hasActiveFilters && `(${Object.values(columnFilters).filter(v => v !== '').length})`}
           </button>
 
-          {/* Tombol Reset Filter */}
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
@@ -474,12 +559,10 @@ export default function DaftarUjianPage() {
           )}
         </div>
 
-        {/* Panel Filter */}
         {showFilters && (
           <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <h3 className="font-semibold text-gray-700 mb-3 text-sm">Filter Kolom</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {/* Filter Kode */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Kode Ujian</label>
                 <input
@@ -491,7 +574,6 @@ export default function DaftarUjianPage() {
                 />
               </div>
 
-              {/* Filter Nama */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Nama Ujian</label>
                 <input
@@ -503,7 +585,20 @@ export default function DaftarUjianPage() {
                 />
               </div>
 
-              {/* Filter Status */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Jenis Ujian</label>
+                <select
+                  value={columnFilters.jenis_ujian}
+                  onChange={(e) => setColumnFilters({ ...columnFilters, jenis_ujian: e.target.value })}
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Semua Jenis Ujian</option>
+                  {uniqueJenisUjian.map(jenis_ujian => (
+                    <option key={jenis_ujian} value={jenis_ujian}>{jenis_ujian}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
                 <select
@@ -518,7 +613,6 @@ export default function DaftarUjianPage() {
                 </select>
               </div>
 
-              {/* Filter Durasi */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Durasi (menit)</label>
                 <select
@@ -533,7 +627,6 @@ export default function DaftarUjianPage() {
                 </select>
               </div>
 
-              {/* Filter Jumlah Soal */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Jumlah Soal</label>
                 <select
@@ -556,7 +649,6 @@ export default function DaftarUjianPage() {
         <p className="text-center py-6 text-gray-600">Loading...</p>
       ) : (
         <>
-          {/* Info hasil filter */}
           {hasActiveFilters && (
             <div className="mb-3 text-sm text-gray-600">
               Menampilkan <span className="font-semibold">{filteredData.length}</span> dari <span className="font-semibold">{dataUjian.length}</span> ujian
@@ -567,25 +659,86 @@ export default function DaftarUjianPage() {
             <table className="min-w-full text-gray-800 text-sm border-collapse">
               <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
                 <tr className="border-b border-black">
-                  <th className="px-4 py-3 text-center w-12">
-                    <div className="flex items-center justify-center gap-1">
-                      <SortArrow /> No
+                  <th className="px-4 py-3 text-center w-12">No</th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('nama')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Nama Ujian
+                      {renderSortIcon('nama')}
                     </div>
                   </th>
-                  <th className="px-4 py-3 text-center">Kode</th>
-                  <th className="px-4 py-3 text-center">Nama Ujian</th>
-                  <th className="px-4 py-3 text-center">Mulai</th>
-                  <th className="px-4 py-3 text-center">Akhir</th>
-                  <th className="px-4 py-3 text-center">Durasi</th>
-                  <th className="px-4 py-3 text-center">Soal</th>
-                  <th className="px-4 py-3 text-center">Status</th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('kode')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Kode Ujian
+                      {renderSortIcon('kode')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('jenis_ujian')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Jenis Ujian
+                      {renderSortIcon('jenis_ujian')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('tanggal_mulai')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Mulai
+                      {renderSortIcon('tanggal_mulai')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('tanggal_akhir')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Akhir
+                      {renderSortIcon('tanggal_akhir')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('durasi')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Durasi
+                      {renderSortIcon('durasi')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('jumlahSoal')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Soal
+                      {renderSortIcon('jumlahSoal')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center cursor-pointer hover:bg-blue-800 transition-colors"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Status
+                      {renderSortIcon('status')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-6 text-center text-gray-500">
+                    <td colSpan={10} className="py-6 text-center text-gray-500">
                       {hasActiveFilters ? 'Tidak ada ujian yang sesuai dengan filter' : 'Belum ada ujian'}
                     </td>
                   </tr>
@@ -598,8 +751,9 @@ export default function DaftarUjianPage() {
                       <td className="text-center py-2 font-medium">
                         {(currentPage - 1) * itemsPerPage + idx + 1}
                       </td>
-                      <td className="text-center">{u.kode}</td>
                       <td className="text-center">{u.nama}</td>
+                      <td className="text-center">{u.kode}</td>
+                      <td className="text-center">{u.jenis_ujian === 'PRETEST' ? 'Pre Test' : 'Post Test'}</td>
                       <td className="text-center">{formatTanggal(u.tanggal_mulai)}</td>
                       <td className="text-center">{formatTanggal(u.tanggal_akhir)}</td>
                       <td className="text-center">{u.durasi} menit</td>
@@ -672,7 +826,7 @@ export default function DaftarUjianPage() {
               Sebelumnya
             </button>
             <span>
-              Halaman {currentPage} dari {totalPages}
+              Halaman {currentPage} dari {totalPages || 1}
             </span>
             <button
               onClick={goToNext}
