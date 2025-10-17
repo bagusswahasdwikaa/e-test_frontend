@@ -132,6 +132,7 @@ export default function BuatSoalPage() {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
               placeholder="Contoh: UJ001"
+              maxLength={12}
               required
             />
           </div>
@@ -145,6 +146,8 @@ export default function BuatSoalPage() {
               value={formData.jumlahSoal}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
+              min={1}
+              max={100}
               required
             />
           </div>

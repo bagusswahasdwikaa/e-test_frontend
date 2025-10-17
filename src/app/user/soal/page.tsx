@@ -28,8 +28,9 @@ export default function SoalPage() {
   const [nilai, setNilai] = useState<number | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [timer, setTimer] = useState<number>(0);
-  const [allowRetry, setAllowRetry] = useState(false); // ✅ tambahkan state baru
-  const [action, setAction] = useState<string | null>(null); // ✅ tambahkan state baru
+  const [allowRetry, setAllowRetry] = useState(false);
+  const [action, setAction] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const router = useRouter();
   const timerActiveRef = useRef(true);
@@ -54,6 +55,13 @@ export default function SoalPage() {
   // === Submit ujian ===
   const handleSubmit = async (auto = false) => {
     if (!ujianId) return;
+    
+    // Tampilkan konfirmasi jika bukan auto-submit
+    if (!auto) {
+      setShowConfirmModal(true);
+      return;
+    }
+    
     const token = localStorage.getItem('token');
     if (!token) {
       setErrorMsg('Sesi anda sudah habis. Silakan login ulang.');
@@ -82,8 +90,8 @@ export default function SoalPage() {
 
       if (res.data?.success) {
         setNilai(res.data.nilai);
-        setAllowRetry(res.data.allow_retry ?? false); // ✅ ambil dari backend
-        setAction(res.data.action ?? null); // ✅ ambil dari backend
+        setAllowRetry(res.data.allow_retry ?? false);
+        setAction(res.data.action ?? null);
 
         localStorage.removeItem('ujian_id');
         localStorage.removeItem('kode_soal');
@@ -118,7 +126,13 @@ export default function SoalPage() {
     localStorage.removeItem('kode_soal');
     localStorage.removeItem('started_at');
     localStorage.removeItem('end_time');
-    router.push('/user/dashboard'); // arahkan kembali ke dashboard
+    router.push('/user/dashboard');
+  };
+
+  // === Konfirmasi submit dari modal ===
+  const confirmSubmit = async () => {
+    setShowConfirmModal(false);
+    await handleSubmit(true);
   };
 
   // === Ambil soal & timer dari backend ===
@@ -203,7 +217,7 @@ export default function SoalPage() {
             media_url: item.media_url,
             media_type: item.media_type,
             jawabans: item.jawabans,
-            jawaban_terpilih: item.jawaban_user ?? null, // ambil jawaban lama dari backend
+            jawaban_terpilih: item.jawaban_user ?? null,
           }))
         );
       } catch (error: any) {
@@ -280,7 +294,7 @@ export default function SoalPage() {
 
   return (
     <UserLayout>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+      <main className="min-h-screen p-4">
         <div className="max-w-5xl mx-auto">
           {loading ? (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -323,7 +337,7 @@ export default function SoalPage() {
                   <p className="text-4xl font-bold text-blue-600">{nilai ?? 'Belum tersedia'}</p>
                 </div>
 
-                {allowRetry ? (
+                {action === 'retry' || allowRetry ? (
                   <>
                     <p className="text-red-600 font-medium mb-6">
                       Nilai Anda belum memenuhi standar minimal. Silakan ulang ujian.
@@ -333,6 +347,18 @@ export default function SoalPage() {
                       className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                     >
                       Ulang Ujian
+                    </button>
+                  </>
+                ) : action === 'redirect_dashboard' ? (
+                  <>
+                    <p className="text-gray-600 mb-6">
+                      Anda akan diarahkan kembali ke dashboard.
+                    </p>
+                    <button
+                      className="bg-gradient-to-r from-gray-400 to-gray-600 hover:from-gray-500 hover:to-gray-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                      onClick={() => router.push('/user/dashboard')}
+                    >
+                      Kembali ke Dashboard
                     </button>
                   </>
                 ) : (
@@ -352,7 +378,6 @@ export default function SoalPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Header with Timer and Progress */}
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -379,7 +404,6 @@ export default function SoalPage() {
                   </div>
                 </div>
                 
-                {/* Progress Bar */}
                 <div className="mt-4">
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
                     <span>Progress</span>
@@ -394,7 +418,6 @@ export default function SoalPage() {
                 </div>
               </div>
 
-              {/* Question Card */}
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <div className="mb-6">
                   <div className="flex items-start gap-4">
@@ -409,7 +432,6 @@ export default function SoalPage() {
                   </div>
                 </div>
 
-                {/* Media */}
                 {soal.media_url && (
                   <div className="mb-8">
                     <div className="bg-gray-50 rounded-xl p-4">
@@ -429,7 +451,6 @@ export default function SoalPage() {
                   </div>
                 )}
 
-                {/* Answer Options */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Pilih jawaban:</h3>
                   {soal.jawabans.map((option, index) => (
@@ -485,7 +506,6 @@ export default function SoalPage() {
                 </div>
               </div>
 
-              {/* Navigation */}
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex justify-between items-center">
                   <button
@@ -499,7 +519,7 @@ export default function SoalPage() {
                     Sebelumnya
                   </button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 overflow-x-auto">
                     {soalList.map((_, index) => (
                       <button
                         key={index}
@@ -516,7 +536,6 @@ export default function SoalPage() {
                       </button>
                     ))}
                   </div>
-
                   {currentIndex === soalList.length - 1 ? (
                     <button
                       className={`flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white shadow-lg transition-all duration-200 transform hover:scale-105 ${
@@ -557,6 +576,50 @@ export default function SoalPage() {
             </div>
           )}
         </div>
+
+        {showConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Konfirmasi Submit
+                </h3>
+                
+                <p className="text-gray-600 mb-2">
+                  Apakah Anda yakin ingin mengakhiri ujian ini?
+                </p>
+                
+                <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">{answeredCount}</span> dari{' '}
+                    <span className="font-semibold">{soalList.length}</span> soal telah dijawab
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-200"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={confirmSubmit}
+                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    Ya, Akhiri Ujian
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </UserLayout>
   );

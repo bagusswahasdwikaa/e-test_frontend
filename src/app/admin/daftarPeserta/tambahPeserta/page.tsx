@@ -23,9 +23,19 @@ export default function TambahPesertaPage() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+
+  // Validasi hanya huruf untuk input "first_name"
+  if (name === "first_name" || name === "last_name") {
+    const alphabetOnly = /^[A-Za-z\s]*$/; // huruf dan spasi
+    if (!alphabetOnly.test(value)) return; // tolak input jika mengandung karakter non-huruf
+  }
+
+  setFormData({
+    ...formData,
+    [name]: value,
+  });
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,12 +102,17 @@ export default function TambahPesertaPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium">ID Peserta</label>
+            <label className="block text-sm font-medium">NIK</label>
             <input
               type="number"
               name="id"
               value={formData.id}
-              onChange={handleChange}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d*$/.test(value) && value.length <= 16) {
+                  handleChange(e);
+                }
+              }}
               className="w-full border rounded px-3 py-2 text-sm"
               required
             />

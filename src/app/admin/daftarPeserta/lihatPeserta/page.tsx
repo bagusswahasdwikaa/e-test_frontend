@@ -220,12 +220,14 @@ export default function LihatPesertaPage() {
 
               {/* Riwayat Ujian */}
               <div className="mt-10">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Riwayat Ujian</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Riwayat Ujian Peserta</h2>
                 {riwayatUjian.length === 0 ? (
                   <p className="text-gray-500">Belum ada riwayat ujian.</p>
                 ) : (
                   <ul className="list-decimal ml-6 space-y-2 text-gray-800 text-sm">
-                    {riwayatUjian.map((ujian, idx) => (
+                    {riwayatUjian
+                      .filter((ujian) => ujian.status === 'Sudah Dikerjakan')
+                      .map((ujian, idx) => (
                       <li key={`${ujian.nama_ujian}-${idx}`}>
                         <div className="mb-1">
                           <span className="font-semibold">{ujian.nama_ujian}</span> —{' '}

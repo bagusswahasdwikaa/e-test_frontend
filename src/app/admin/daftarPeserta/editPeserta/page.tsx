@@ -10,6 +10,7 @@ export default function EditPesertaPage() {
   const id = searchParams.get('id');
 
   const [formData, setFormData] = useState({
+    id: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -45,6 +46,7 @@ export default function EditPesertaPage() {
         }
 
         setFormData({
+          id: data.data.ID_Peserta || '',
           first_name,
           last_name,
           instansi: data.data.instansi || '',
@@ -61,8 +63,19 @@ export default function EditPesertaPage() {
     fetchPeserta();
   }, [id]);
 
+  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  //   const { name, value } = e.target;
+  //   setFormData((prev) => ({ ...prev, [name]: value }));
+  // };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    // Validasi hanya huruf untuk input "first_name"
+    if (name === "first_name" || name === "last_name") {
+      const alphabetOnly = /^[A-Za-z\s]*$/; // huruf dan spasi
+      if (!alphabetOnly.test(value)) return; // tolak input jika mengandung karakter non-huruf
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -123,6 +136,22 @@ export default function EditPesertaPage() {
         {success && <div className="mb-4 text-green-600 text-sm">{success}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium">NIK</label>
+            <input
+              type="number"
+              name="id"
+              value={formData.id}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d*$/.test(value) && value.length <= 16) {
+                  handleChange(e);
+                }
+              }}
+              className="w-full border rounded px-3 py-2 text-sm"
+              required
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium">Nama Depan</label>
             <input

@@ -9,6 +9,7 @@ export default function RegisterPage() {
     id: '',
     firstName: '',
     lastName: '',
+    instansi: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -21,10 +22,15 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { id, firstName, lastName, email, password, password_confirmation } = form;
+    const { id, firstName, lastName, email, instansi, password, password_confirmation } = form;
 
     // Validasi input
-    if (!id || !firstName || !lastName || !email || !password || !password_confirmation) {
+    if (!id || !firstName || !lastName || !email || !instansi ||!password || !password_confirmation) {
+      const nameRegex = /^[A-Za-z\s]+$/;
+      if (!nameRegex.test(firstName) || !nameRegex.test(lastName)) {
+        alert('Nama hanya boleh berisi huruf dan spasi.');
+        return;
+      }
       alert('Semua kolom harus diisi.');
       return;
     }
@@ -47,10 +53,11 @@ export default function RegisterPage() {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          id: parseInt(id, 10),
+          id: id.trim(),
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           email: email.trim(),
+          instansi: instansi.trim(),
           password,
           password_confirmation,
         }),
@@ -100,9 +107,14 @@ export default function RegisterPage() {
             <input
               type="number"
               name="id"
-              placeholder="ID"
+              placeholder="NIK"
               value={form.id}
-              onChange={handleChange}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d*$/.test(value) && value.length <= 16) {
+                  handleChange(e);
+                }
+              }}
               className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
               required
             />
@@ -112,18 +124,40 @@ export default function RegisterPage() {
               placeholder="Nama Depan"
               value={form.firstName}
               onChange={handleChange}
+              onBeforeInput={(e) => {
+                if (!/^[A-Za-z\s]+$/.test(e.data || '')) {
+                  e.preventDefault();
+                }
+              }}
               className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-              pattern="[A-Za-z]+"
+              pattern="[A-Za-z\s]+"
+              maxLength={60}
               required
             />
+
             <input
               type="text"
               name="lastName"
               placeholder="Nama Belakang"
               value={form.lastName}
               onChange={handleChange}
+              onBeforeInput={(e) => {
+                if (!/^[A-Za-z\s]+$/.test(e.data || '')) {
+                  e.preventDefault();
+                }
+              }}
               className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
-              pattern="[A-Za-z]+"
+              pattern="[A-Za-z\s]+"
+              maxLength={60}
+              required
+            />
+            <input
+              type="instansi"
+              name="instansi"
+              placeholder="Sekolah/Departemen"
+              value={form.instansi}
+              onChange={handleChange}
+              className="w-full bg-white border border-white text-black placeholder-[#979797] px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
               required
             />
             <input

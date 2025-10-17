@@ -957,6 +957,7 @@ export default function DaftarUjianPage() {
               onChange={(e) => setKodeSoalBaru(e.target.value)}
               placeholder="Masukkan kode soal baru"
               className="w-full px-3 py-2 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              maxLength={12}
             />
 
             <div className="flex justify-end gap-3">
