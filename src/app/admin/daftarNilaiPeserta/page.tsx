@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -20,6 +21,7 @@ type SortField = 'user_id' | 'nama_lengkap' | 'tanggal' | 'nilai' | 'nama_ujian'
 type SortDirection = 'asc' | 'desc' | null;
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [examData, setExamData] = useState<ExamResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +58,11 @@ export default function AdminDashboard() {
       })
       .finally(() => setLoading(false));
   }, [API_BASE_URL]);
+
+  // Fungsi untuk handle klik nama peserta
+  const handleNameClick = (userId: number) => {
+    router.push(`/admin/daftarPeserta/lihatPeserta?id=${userId}`);
+  };
 
   // Fungsi untuk handle sorting
   const handleSort = (field: SortField) => {
@@ -364,7 +371,15 @@ export default function AdminDashboard() {
                     >
                       <td className="px-4 py-2">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                       <td className="px-4 py-2">{item.user_id.toString().padStart(3, '0')}</td>
-                      <td className="px-4 py-2">{item.nama_lengkap}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => handleNameClick(item.user_id)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium transition-colors"
+                          type="button"
+                        >
+                          {item.nama_lengkap}
+                        </button>
+                      </td>
                       <td className="px-4 py-2">{item.tanggal ?? '-'}</td>
                       <td className="px-4 py-2">{item.nilai !== null ? item.nilai : '-'}</td>
                       <td className="px-4 py-2">{item.nama_ujian ?? '-'}</td>
