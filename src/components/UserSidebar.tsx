@@ -215,7 +215,7 @@ export default function UserSidebar({
                 transition={{ duration: 0.3 }}
                 className="flex items-center gap-3"
               >
-                <div className="w-10 h-15 rounded-md overflow-hidden shadow-lg">
+                <div className="w-11 h-11 rounded-md overflow-hidden shadow-lg">
                   <img
                     src="/assets/logo/p.png"
                     alt="Logo PGLSMID"
@@ -235,7 +235,7 @@ export default function UserSidebar({
                 transition={{ duration: 0.3 }}
                 className="w-full flex justify-center"
               >
-                <div className="w-10 h-15 rounded-md overflow-hidden shadow-lg">
+                <div className="w-9 h-9 rounded-md overflow-hidden shadow-lg">
                   <img
                     src="/assets/logo/p.png"
                     alt="Logo PGLSMID"

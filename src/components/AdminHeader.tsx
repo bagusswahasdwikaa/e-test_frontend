@@ -10,6 +10,7 @@ import {
   FaSignOutAlt,
   FaBell,
   FaGlobe,
+  FaKey,
 } from 'react-icons/fa';
 
 interface AdminHeaderProps {
@@ -83,6 +84,11 @@ export default function AdminHeader({
   const handleProfile = () => {
     setIsDropdownOpen(false);
     router.push('/admin/profil');
+  };
+
+  const handleChangePassword = () => {
+    setIsDropdownOpen(false);
+    router.push('/admin/ubah-kata-sandi');
   };
 
   // Close dropdown when clicking outside
@@ -253,6 +259,19 @@ export default function AdminHeader({
                   <div className="text-left">
                     <div className="font-medium text-gray-900">Profil Saya</div>
                     <div className="text-xs text-gray-500">Kelola profil dan pengaturan</div>
+                  </div>
+                </button>
+
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-amber-50 rounded-xl transition-colors cursor-pointer group"
+                  onClick={handleChangePassword}
+                >
+                  <div className="w-8 h-8 bg-amber-100 group-hover:bg-amber-200 rounded-lg flex items-center justify-center transition-colors">
+                    <FaKey className="text-amber-600" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-gray-900">Ubah Kata Sandi</div>
+                    <div className="text-xs text-gray-500">Perbarui kata sandi akun</div>
                   </div>
                 </button>
 

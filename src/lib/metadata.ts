@@ -1,5 +1,5 @@
 // lib/metadata.ts
 export const defaultMetadata = {
-  title: 'E-TEST',
+  title: 'e-test',
   description: 'Aplikasi Ujian Online',
 };

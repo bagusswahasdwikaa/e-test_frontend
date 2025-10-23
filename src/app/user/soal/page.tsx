@@ -31,9 +31,41 @@ export default function SoalPage() {
   const [allowRetry, setAllowRetry] = useState(false);
   const [action, setAction] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [isExamActive, setIsExamActive] = useState(false);
 
   const router = useRouter();
   const timerActiveRef = useRef(true);
+
+  // === Prevent navigation during exam ===
+  useEffect(() => {
+    if (!isExamActive) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Ujian sedang berlangsung. Yakin ingin meninggalkan halaman?';
+      return e.returnValue;
+    };
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (window.confirm('Ujian sedang berlangsung. Yakin ingin meninggalkan halaman?')) {
+        setIsExamActive(false);
+        return;
+      }
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Push initial state to prevent back button
+    window.history.pushState(null, '', window.location.href);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isExamActive]);
 
   // === Simpan jawaban sementara ke backend ===
   const saveJawaban = async (soalId: number, jawabanId: number | string) => {
@@ -65,6 +97,7 @@ export default function SoalPage() {
     const token = localStorage.getItem('token');
     if (!token) {
       setErrorMsg('Sesi anda sudah habis. Silakan login ulang.');
+      setIsExamActive(false);
       router.push('/login');
       return;
     }
@@ -97,6 +130,7 @@ export default function SoalPage() {
         localStorage.removeItem('kode_soal');
         localStorage.removeItem('started_at');
         localStorage.removeItem('end_time');
+        setIsExamActive(false);
       } else {
         setErrorMsg(res.data?.message || 'Submit gagal.');
       }
@@ -115,6 +149,7 @@ export default function SoalPage() {
       localStorage.removeItem('kode_soal');
       localStorage.removeItem('started_at');
       localStorage.removeItem('end_time');
+      setIsExamActive(false);
     } finally {
       setSubmitLoading(false);
     }
@@ -126,6 +161,7 @@ export default function SoalPage() {
     localStorage.removeItem('kode_soal');
     localStorage.removeItem('started_at');
     localStorage.removeItem('end_time');
+    setIsExamActive(false);
     router.push('/user/dashboard');
   };
 
@@ -143,8 +179,8 @@ export default function SoalPage() {
       const kode_soal = localStorage.getItem('kode_soal');
 
       if (!token || !ujian_id || !kode_soal) {
-        alert('Ujian tidak valid. Silakan mulai dari dashboard.');
-        router.push('/user/dashboard');
+        setShowValidationModal(true);
+        setLoading(false);
         return;
       }
 
@@ -156,6 +192,7 @@ export default function SoalPage() {
       }
 
       setUjianId(parsedUjianId);
+      setIsExamActive(true);
 
       try {
         let startedAt: string | null = localStorage.getItem('started_at');
@@ -210,13 +247,20 @@ export default function SoalPage() {
         }
 
         const rawSoal = soalRes.data.data ?? [];
+        
+        if (rawSoal.length === 0) {
+          setErrorMsg('Tidak ada soal yang tersedia.');
+          setLoading(false);
+          return;
+        }
+
         setSoalList(
           rawSoal.map((item: any) => ({
             soal_id: item.soal_id,
             pertanyaan: item.pertanyaan,
             media_url: item.media_url,
             media_type: item.media_type,
-            jawabans: item.jawabans,
+            jawabans: item.jawabans || [],
             jawaban_terpilih: item.jawaban_user ?? null,
           }))
         );
@@ -240,7 +284,6 @@ export default function SoalPage() {
         if (prev <= 1) {
           clearInterval(interval);
           if (timerActiveRef.current) {
-            alert('Waktu ujian habis, ujian akan disubmit otomatis.');
             handleSubmit(true);
           }
           return 0;
@@ -312,7 +355,7 @@ export default function SoalPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Terjadi Kesalahan</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Anda gagal!</h3>
                 <p className="text-red-600 mb-4">{errorMsg}</p>
                 <button
                   onClick={() => router.push('/user/dashboard')}
@@ -325,9 +368,15 @@ export default function SoalPage() {
           ) : nilai !== null ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-lg w-full">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+                  (action === 'retry' || allowRetry) ? 'bg-red-100' : 'bg-green-100'
+                }`}>
+                  <svg className={`w-10 h-10 ${(action === 'retry' || allowRetry) ? 'text-red-500' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {(action === 'retry' || allowRetry) ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
                   </svg>
                 </div>
 
@@ -376,7 +425,7 @@ export default function SoalPage() {
                 )}
               </div>
             </div>
-          ) : (
+          ) : soal ? (
             <div className="space-y-6">
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -574,9 +623,40 @@ export default function SoalPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
+        {/* Modal Validation - Belum Masuk Ujian */}
+        {showValidationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Akses Ditolak
+                </h3>
+                
+                <p className="text-gray-600 mb-6">
+                  Anda belum memulai ujian atau sesi ujian tidak valid. Silakan mulai ujian dari dashboard terlebih dahulu.
+                </p>
+
+                <button
+                  onClick={() => router.push('/user/dashboard')}
+                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  Kembali ke Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Konfirmasi Submit */}
         {showConfirmModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
