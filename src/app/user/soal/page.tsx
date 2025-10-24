@@ -13,8 +13,8 @@ interface Jawaban {
 interface Soal {
   soal_id: number;
   pertanyaan: string;
-  media_url?: string | null;
-  media_type?: string | null;
+  media_type: 'none' | 'image' | 'video';
+  media_path?: string | null;
   jawabans: Jawaban[];
   jawaban_terpilih?: number | string | null;
 }
@@ -36,6 +36,48 @@ export default function SoalPage() {
 
   const router = useRouter();
   const timerActiveRef = useRef(true);
+
+  // Base URL untuk media - sesuaikan dengan backend Laravel Anda
+  const MEDIA_BASE_URL = 'http://localhost:8000';
+
+  // Function untuk membentuk URL lengkap dari media_path
+  const getMediaUrl = (mediaPath: string | null | undefined): string | null => {
+    if (!mediaPath) return null;
+    
+    // Jika sudah full URL (dimulai dengan http/https), return as-is
+    if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
+      return mediaPath;
+    }
+    
+    // Backend mengirim path seperti: "soal_media/filename.png"
+    // File sebenarnya ada di: "public/storage/soal_media/filename.png"
+    // URL yang benar: "http://localhost:8000/storage/soal_media/filename.png"
+    
+    let cleanPath = mediaPath;
+    
+    // Hapus 'public/' dari awal path jika ada
+    if (cleanPath.startsWith('public/')) {
+      cleanPath = cleanPath.replace(/^public\//, '');
+    }
+    
+    // Jika path sudah dimulai dengan 'storage/', langsung gunakan
+    if (cleanPath.startsWith('storage/')) {
+      return `${MEDIA_BASE_URL}/${cleanPath}`;
+    }
+    
+    // Jika path dimulai dengan 'soal_media/', tambahkan 'storage/' di depannya
+    if (cleanPath.startsWith('soal_media/')) {
+      return `${MEDIA_BASE_URL}/storage/${cleanPath}`;
+    }
+    
+    // Jika path dimulai dengan /, langsung gabungkan dengan base URL
+    if (cleanPath.startsWith('/')) {
+      return `${MEDIA_BASE_URL}${cleanPath}`;
+    }
+    
+    // Default: anggap path relatif, tambahkan storage/ di depan
+    return `${MEDIA_BASE_URL}/storage/${cleanPath}`;
+  };
 
   // === Prevent navigation during exam ===
   useEffect(() => {
@@ -258,8 +300,8 @@ export default function SoalPage() {
           rawSoal.map((item: any) => ({
             soal_id: item.soal_id,
             pertanyaan: item.pertanyaan,
-            media_url: item.media_url,
-            media_type: item.media_type,
+            media_path: item.media_path, // Simpan media_path mentah dari backend
+            media_type: item.media_type || 'none',
             jawabans: item.jawabans || [],
             jawaban_terpilih: item.jawaban_user ?? null,
           }))
@@ -468,6 +510,69 @@ export default function SoalPage() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-lg p-8">
+                {/* Render media jika ada - Menggunakan getMediaUrl untuk membentuk URL lengkap */}
+                {soal.media_path && soal.media_type !== 'none' && (
+                  <div className="mb-8">
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      {soal.media_type === 'image' ? (
+                        <div className="relative">
+                          {/* Debug info - hapus setelah selesai debugging */}
+                          <div className="mb-2 text-sm text-gray-600 bg-white p-2 rounded">
+                            <div><strong>Perhatikan gambar berikut:</strong></div>
+                          </div>
+                          
+                          <img
+                            src={getMediaUrl(soal.media_path) || ''}
+                            alt="Media soal"
+                            className="w-full max-h-96 object-contain rounded-lg mx-auto"
+                            onError={(e) => {
+                              // Fallback jika gambar gagal dimuat
+                              const target = e.target as HTMLImageElement;
+                              const imgContainer = target.parentElement;
+                              
+                              const mediaPath = soal.media_path;
+                              const fullUrl = getMediaUrl(soal.media_path);
+                              
+                              console.error('=== GAGAL MEMUAT GAMBAR ===');
+                              console.error('Media Path:', mediaPath);
+                              console.error('Full URL:', fullUrl);
+                              console.error('Base URL:', MEDIA_BASE_URL);
+                              console.error('Image src:', target.src);
+                              console.error('==========================');
+                              
+                              // Tampilkan pesan error yang lebih informatif
+                              if (imgContainer) {
+                                imgContainer.innerHTML = `
+                                  <div class="bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center">
+                                    <svg class="w-16 h-16 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="text-red-600 font-medium mb-2">Gambar tidak dapat dimuat</p>
+                                    <div class="text-left bg-white p-3 rounded text-xs space-y-1">
+                                      <div><strong>Media Path:</strong> ${mediaPath || 'null'}</div>
+                                      <div><strong>Full URL:</strong> ${fullUrl || 'null'}</div>
+                                      <div><strong>Base URL:</strong> ${MEDIA_BASE_URL}</div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-3">Pastikan file ada di: public/storage/${mediaPath}</p>
+                                  </div>
+                                `;
+                              }
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Gambar berhasil dimuat:', getMediaUrl(soal.media_path));
+                            }}
+                          />
+                        </div>
+                      ) : soal.media_type === 'video' ? (
+                        <video controls className="w-full max-h-96 rounded-lg">
+                          <source src={getMediaUrl(soal.media_path) || ''} type="video/mp4" />
+                          Browser tidak mendukung video.
+                        </video>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mb-6">
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0 mt-1">
@@ -480,25 +585,6 @@ export default function SoalPage() {
                     </div>
                   </div>
                 </div>
-
-                {soal.media_url && (
-                  <div className="mb-8">
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      {soal.media_type === 'image' ? (
-                        <img
-                          src={soal.media_url}
-                          alt="Media soal"
-                          className="w-full max-h-80 object-contain rounded-lg mx-auto"
-                        />
-                      ) : (
-                        <video controls className="w-full max-h-80 rounded-lg">
-                          <source src={soal.media_url} type="video/mp4" />
-                          Browser tidak mendukung video.
-                        </video>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Pilih jawaban:</h3>

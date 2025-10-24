@@ -13,8 +13,9 @@ type RawJawabanObj = {
 
 type RawSoal = {
   pertanyaan: string;
-  media_type: 'none' | 'image' | 'video';
+  media_type: 'none' | 'image';
   media_path: string | null;
+  media_url: string | null;
   jawabans: RawJawabanObj;
 };
 
@@ -25,8 +26,9 @@ type NormalizedJawaban = {
 
 type Soal = {
   pertanyaan: string;
-  media_type: 'none' | 'image' | 'video';
+  media_type: 'none' | 'image';
   media_path: string | null;
+  media_url: string | null;
   jawabans: NormalizedJawaban[];
 };
 
@@ -42,11 +44,7 @@ export default function LihatSoalPage() {
     fetch(`http://localhost:8000/api/soals/by-ujian/${ujianId}`)
       .then((res) => res.json())
       .then(({ data }: { data: RawSoal[] }) => {
-        // data adalah array soal
-
         const normalizedData: Soal[] = data.map((soal) => {
-          // Jawabans backend berupa object {A: {...}, B: {...}, C: {...}, D: {...}}
-          // Konversi ke array berurutan A-D
           const keys = ['A', 'B', 'C', 'D'];
           const normalizedJawabans: NormalizedJawaban[] = keys.map((key) => {
             const jaw = soal.jawabans[key];
@@ -61,10 +59,16 @@ export default function LihatSoalPage() {
             };
           });
 
+          const mediaUrl =
+            soal.media_type === 'image' && soal.media_path
+              ? `http://localhost:8000/storage/${soal.media_path}`
+              : null;
+
           return {
             pertanyaan: soal.pertanyaan,
             media_type: soal.media_type,
             media_path: soal.media_path,
+            media_url: mediaUrl,
             jawabans: normalizedJawabans,
           };
         });
@@ -77,31 +81,19 @@ export default function LihatSoalPage() {
       });
   }, [ujianId]);
 
-  const renderMedia = (mediaType: string, mediaPath: string | null) => {
-    if (!mediaPath) return null;
+  /**
+   * ✅ Render hanya untuk gambar (tidak ada video)
+   */
+  const renderMedia = (mediaType: string, mediaUrl: string | null) => {
+    if (!mediaUrl || mediaType !== 'image') return null;
 
-    const fullUrl = `http://localhost:8000/storage/${mediaPath}`;
-
-    if (mediaType === 'image') {
-      return (
-        <img
-          src={fullUrl}
-          alt="Media Gambar Soal"
-          className="max-w-full max-h-64 rounded my-4"
-        />
-      );
-    }
-
-    if (mediaType === 'video') {
-      return (
-        <video controls className="w-full max-h-64 rounded my-4">
-          <source src={fullUrl} type="video/mp4" />
-          Browser Anda tidak mendukung video.
-        </video>
-      );
-    }
-
-    return null;
+     return (
+      <img
+        src={mediaUrl}
+        alt="Gambar Soal"
+        className="max-w-full max-h-64 rounded my-4 border"
+      />
+    );
   };
 
   return (
@@ -118,10 +110,12 @@ export default function LihatSoalPage() {
               className="mb-6 p-4 border rounded bg-gray-50 shadow-sm"
             >
               <h2 className="font-semibold mb-2">Soal {idx + 1}:</h2>
-              <p className="mb-2 text-gray-800">{soal.pertanyaan}</p>
+              <p className="mb-2 text-gray-800 whitespace-pre-line">
+                {soal.pertanyaan}
+              </p>
 
-              {/* Tampilkan media jika ada */}
-              {renderMedia(soal.media_type, soal.media_path)}
+              {/* ✅ Hanya tampilkan gambar */}
+              {renderMedia(soal.media_type, soal.media_url)}
 
               <ul className="space-y-2 mt-3">
                 {soal.jawabans.map((j, i) => {
@@ -135,8 +129,8 @@ export default function LihatSoalPage() {
                           : 'bg-red-50 text-red-600 border-red-300'
                       }`}
                     >
-                      {label}. {j.jawaban}
-                      {j.is_correct ? ' ✅ (Jawaban Benar)' : ' ❌'}
+                      {label}. {j.jawaban}{' '}
+                      {j.is_correct ? '✅ (Benar)' : '❌'}
                     </li>
                   );
                 })}

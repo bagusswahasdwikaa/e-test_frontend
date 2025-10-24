@@ -15,7 +15,7 @@ type SingleSoal = {
   pertanyaan: string;
   mediaFile: File | null;
   mediaPreviewUrl: string | null;
-  mediaType: 'none' | 'image' | 'video';
+  mediaType: 'none' | 'image';
   jawaban: JawabanOptions;
   jawabanBenar: keyof JawabanOptions;
 };
@@ -33,6 +33,7 @@ export default function SoalBulkPage() {
   const [soals, setSoals] = useState<SingleSoal[]>([]);
   const [showModal, setShowModal] = useState(false);
 
+  // Inisialisasi daftar soal kosong
   useEffect(() => {
     if (!ujianId || jumlahSoal <= 0) {
       alert('Parameter ujian_id atau jumlah_soal tidak valid.');
@@ -57,22 +58,18 @@ export default function SoalBulkPage() {
     setSoals(updated);
   };
 
+  // ✅ Hanya menerima gambar (png, jpg, jpeg)
   const handleMediaChange = (index: number, file: File | null) => {
     const updated = [...soals];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Hanya file gambar (PNG, JPG, JPEG) yang diperbolehkan.');
+        return;
+      }
+
       updated[index].mediaFile = file;
       updated[index].mediaPreviewUrl = URL.createObjectURL(file);
-
-      if (file.type.startsWith('image/')) {
-        updated[index].mediaType = 'image';
-      } else if (file.type.startsWith('video/')) {
-        updated[index].mediaType = 'video';
-      } else {
-        updated[index].mediaType = 'none';
-        updated[index].mediaFile = null;
-        updated[index].mediaPreviewUrl = null;
-        alert('Hanya file gambar atau video yang diperbolehkan.');
-      }
+      updated[index].mediaType = 'image';
     } else {
       updated[index].mediaFile = null;
       updated[index].mediaPreviewUrl = null;
@@ -145,7 +142,7 @@ export default function SoalBulkPage() {
     try {
       const response = await fetch('http://localhost:8000/api/soals/bulk', {
         method: 'POST',
-        body: formData, // multipart/form-data otomatis ditangani browser
+        body: formData,
       });
 
       if (!response.ok) {
@@ -155,7 +152,7 @@ export default function SoalBulkPage() {
         return;
       }
 
-      setShowModal(true); // Tampilkan modal setelah berhasil
+      setShowModal(true);
     } catch (error) {
       console.error('Error saat fetch:', error);
       alert('Terjadi kesalahan saat menyimpan soal.');
@@ -166,7 +163,7 @@ export default function SoalBulkPage() {
     <AdminLayout>
       <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow mt-6">
         <h1 className="text-2xl font-semibold mb-6">
-          Buat soal {jumlahSoal} 
+          Buat Soal ({jumlahSoal})
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -174,7 +171,7 @@ export default function SoalBulkPage() {
             <div key={idx} className="border p-4 rounded bg-gray-50">
               <h2 className="font-medium mb-2">Soal {idx + 1}</h2>
 
-              {/* Input Teks Pertanyaan */}
+              {/* Input Pertanyaan */}
               <textarea
                 className="w-full border rounded p-2 mb-3"
                 placeholder="Tuliskan pertanyaan"
@@ -183,35 +180,28 @@ export default function SoalBulkPage() {
                 required
               />
 
-              {/* Input Upload Media */}
+              {/* ✅ Input Upload Gambar */}
               <div className="mb-3">
-                <label className="block mb-1 font-medium">Upload Media (Gambar/Video)</label>
+                <label className="block mb-1 font-medium">
+                  Upload Gambar (PNG, JPG, JPEG)
+                </label>
                 <input
                   type="file"
-                  accept="image/*,video/*"
+                  accept="image/*"
                   onChange={(e) =>
                     handleMediaChange(idx, e.target.files ? e.target.files[0] : null)
                   }
                 />
               </div>
 
-              {/* Preview Media */}
+              {/* Preview Gambar */}
               {s.mediaPreviewUrl && (
                 <div className="mb-3">
-                  {s.mediaType === 'image' && (
-                    <img
-                      src={s.mediaPreviewUrl}
-                      alt={`Preview media soal ${idx + 1}`}
-                      className="max-w-full max-h-60 rounded"
-                    />
-                  )}
-                  {s.mediaType === 'video' && (
-                    <video
-                      src={s.mediaPreviewUrl}
-                      controls
-                      className="max-w-full max-h-60 rounded"
-                    />
-                  )}
+                  <img
+                    src={s.mediaPreviewUrl}
+                    alt={`Preview soal ${idx + 1}`}
+                    className="max-w-full max-h-60 rounded"
+                  />
                 </div>
               )}
 
@@ -232,12 +222,14 @@ export default function SoalBulkPage() {
                 ))}
               </div>
 
-              {/* Jawaban Benar */}
+              {/* Pilih Jawaban Benar */}
               <div className="mb-2">
                 <label className="block mb-1 font-medium">Jawaban Benar:</label>
                 <select
                   value={s.jawabanBenar}
-                  onChange={(e) => handleJawabanBenarChange(idx, e.target.value as keyof JawabanOptions)}
+                  onChange={(e) =>
+                    handleJawabanBenarChange(idx, e.target.value as keyof JawabanOptions)
+                  }
                   className="border rounded px-3 py-2"
                   required
                 >
@@ -256,12 +248,13 @@ export default function SoalBulkPage() {
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
             >
-              Simpan Perubahan
+              Simpan Soal
             </button>
           </div>
         </form>
       </div>
 
+      {/* ✅ Modal konfirmasi sukses */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
