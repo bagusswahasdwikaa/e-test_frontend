@@ -8,6 +8,8 @@ import {
   TrashIcon
 } from '@heroicons/react/24/outline';
 import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 interface Peserta {
   ID_Peserta: number;
@@ -243,26 +245,74 @@ export default function DaftarPesertaPage() {
 
   // Download template Excel
   const handleDownloadTemplate = () => {
-    const headers = ['id', 'first_name', 'last_name', 'email', 'password', 'status', 'instansi', 'bio', 'photo_url'];
+    const headers = [
+      'id',
+      'first_name',
+      'last_name',
+      'email',
+      'password',
+      'status',
+      'instansi',
+      'bio',
+      'photo_url'
+    ];
+
     const exampleData = [
       ['12345', 'Jono', 'Joni', 'jonojoni@example.com', 'password123', 'aktif', 'PT Example', 'Bio singkat', 'https://example.com/photo.jpg'],
-      ['-', 'Cak', 'Doel', 'cakdoel@example.com', '-', '-', 'PT Example IT', '-', '-']      
+      ['67891', 'Cak', 'Doel', 'cakdoel@example.com', '', 'non aktif', 'PT Example IT', '', '']
     ];
-    
-    let csvContent = headers.join(',') + '\n';
-    exampleData.forEach(row => {
-      csvContent += row.join(',') + '\n';
+
+    // Gabungkan header dan data contoh
+    const worksheetData = [headers, ...exampleData];
+
+    // Buat worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+    // Tambahkan gaya untuk header (bold + border)
+    headers.forEach((_, index) => {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: index });
+      if (!worksheet[cellAddress]) return;
+
+      worksheet[cellAddress].s = {
+        font: { bold: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '000000' } },
+          bottom: { style: 'thin', color: { rgb: '000000' } },
+          left: { style: 'thin', color: { rgb: '000000' } },
+          right: { style: 'thin', color: { rgb: '000000' } },
+        },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'template_peserta.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Tambahkan border ke seluruh sel
+    for (let R = 1; R < worksheetData.length; R++) {
+      for (let C = 0; C < headers.length; C++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!worksheet[cellAddress]) continue;
+
+        worksheet[cellAddress].s = {
+          border: {
+            top: { style: 'thin', color: { rgb: '000000' } },
+            bottom: { style: 'thin', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '000000' } },
+            right: { style: 'thin', color: { rgb: '000000' } },
+          },
+        };
+      }
+    }
+
+    // Tentukan lebar kolom
+    worksheet['!cols'] = headers.map(() => ({ wch: 20 }));
+
+    // Buat workbook dan file
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template User');
+
+    // Simpan sebagai file .xlsx
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, 'Template_User.xlsx');
   };
 
   // Handle file selection
@@ -672,7 +722,7 @@ export default function DaftarPesertaPage() {
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pilih File Excel/CSV
+                Pilih File Excel
               </label>
               <input
                 type="file"
@@ -706,7 +756,7 @@ export default function DaftarPesertaPage() {
               <p className="text-xs text-yellow-800">
                 <span className="font-semibold">Catatan:</span> Pastikan file Anda sesuai format memiliki kolom: 
                 id, first_name, last_name, email, password, status, instansi, bio, photo_url.
-                Kolom yang tidak boleh kosong adalah [first_name, last_name, email, instansi], silahkan unduh template.
+                Kolom yang tidak boleh kosong adalah [id, first_name, last_name, email, status, instansi], silahkan unduh template.
               </p>
             </div>
 

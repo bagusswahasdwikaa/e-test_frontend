@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -32,6 +32,21 @@ export default function SoalBulkPage() {
 
   const [soals, setSoals] = useState<SingleSoal[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-resize textarea
+  const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
+
+  const autoResizeTextarea = (textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    // Auto-resize semua textarea saat soals berubah
+    Object.values(textareaRefs.current).forEach(autoResizeTextarea);
+  }, [soals]);
 
   // Inisialisasi daftar soal kosong
   useEffect(() => {
@@ -58,7 +73,6 @@ export default function SoalBulkPage() {
     setSoals(updated);
   };
 
-  // ✅ Hanya menerima gambar (png, jpg, jpeg)
   const handleMediaChange = (index: number, file: File | null) => {
     const updated = [...soals];
     if (file) {
@@ -75,6 +89,17 @@ export default function SoalBulkPage() {
       updated[index].mediaPreviewUrl = null;
       updated[index].mediaType = 'none';
     }
+    setSoals(updated);
+  };
+
+  const handleRemoveMedia = (index: number) => {
+    const updated = [...soals];
+    if (updated[index].mediaPreviewUrl) {
+      URL.revokeObjectURL(updated[index].mediaPreviewUrl!);
+    }
+    updated[index].mediaFile = null;
+    updated[index].mediaPreviewUrl = null;
+    updated[index].mediaType = 'none';
     setSoals(updated);
   };
 
@@ -120,6 +145,8 @@ export default function SoalBulkPage() {
       }
     }
 
+    setIsSubmitting(true);
+
     // Siapkan FormData untuk multipart upload
     const formData = new FormData();
     formData.append('ujian_id', ujianId.toString());
@@ -156,34 +183,77 @@ export default function SoalBulkPage() {
     } catch (error) {
       console.error('Error saat fetch:', error);
       alert('Terjadi kesalahan saat menyimpan soal.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  if (soals.length === 0) {
+    return (
+      <AdminLayout>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
+          <div className="relative w-35 h-35">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/assets/logo/panasonic-logo.png"
+                alt="Logo Panasonic"
+                className="w-25 h-25 object-contain"
+              />
+            </div>
+            <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow mt-6">
-        <h1 className="text-2xl font-semibold mb-6">
-          Buat Soal ({jumlahSoal})
-        </h1>
+      <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-lg mt-6">
+        <div className="border-b pb-4 mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">Buat Soal Ujian</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Jumlah Soal: <span className="font-semibold">{jumlahSoal}</span>
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {soals.map((s, idx) => (
-            <div key={idx} className="border p-4 rounded bg-gray-50">
-              <h2 className="font-medium mb-2">Soal {idx + 1}</h2>
+            <div key={idx} className="border border-gray-300 rounded-lg p-5 bg-gradient-to-br from-white to-gray-50 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h2 className="text-lg font-semibold text-blue-900">Soal {idx + 1}</h2>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  {s.pertanyaan.length} karakter
+                </span>
+              </div>
 
-              {/* Input Pertanyaan */}
-              <textarea
-                className="w-full border rounded p-2 mb-3"
-                placeholder="Tuliskan pertanyaan"
-                value={s.pertanyaan}
-                onChange={(e) => handlePertanyaanChange(idx, e.target.value)}
-                required
-              />
+              {/* Input Pertanyaan - Auto-resize Textarea */}
+              <div>
+                <label className="block font-medium text-gray-700 mb-2">
+                  Pertanyaan <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  ref={(el) => {
+                    textareaRefs.current[idx] = el;
+                    autoResizeTextarea(el);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden transition-all"
+                  placeholder="Tuliskan pertanyaan soal di sini..."
+                  value={s.pertanyaan}
+                  onChange={(e) => {
+                    handlePertanyaanChange(idx, e.target.value);
+                    autoResizeTextarea(e.target);
+                  }}
+                  rows={3}
+                  style={{ minHeight: '80px' }}
+                  required
+                />
+              </div>
 
-              {/* ✅ Input Upload Gambar */}
-              <div className="mb-3">
-                <label className="block mb-1 font-medium">
-                  Upload Gambar (PNG, JPG, JPEG)
+              {/* Upload Gambar */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label className="block font-medium text-gray-700 mb-2">
+                  Upload Gambar (Opsional)
                 </label>
                 <input
                   type="file"
@@ -191,51 +261,73 @@ export default function SoalBulkPage() {
                   onChange={(e) =>
                     handleMediaChange(idx, e.target.files ? e.target.files[0] : null)
                   }
+                  className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer"
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  Format yang didukung: PNG, JPG, JPEG
+                </p>
+
+                {/* Preview Gambar */}
+                {s.mediaPreviewUrl && (
+                  <div className="mt-4 p-3 bg-white rounded-lg border border-gray-300">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Preview Gambar:</p>
+                    <img
+                      src={s.mediaPreviewUrl}
+                      alt={`Preview soal ${idx + 1}`}
+                      className="max-w-full max-h-64 rounded-lg border border-gray-200 shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMedia(idx)}
+                      className="mt-3 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
+                    >
+                      🗑️ Hapus Gambar
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Preview Gambar */}
-              {s.mediaPreviewUrl && (
-                <div className="mb-3">
-                  <img
-                    src={s.mediaPreviewUrl}
-                    alt={`Preview soal ${idx + 1}`}
-                    className="max-w-full max-h-60 rounded"
-                  />
-                </div>
-              )}
-
               {/* Jawaban Pilihan */}
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => (
-                  <div key={k}>
-                    <label className="block font-sm mb-1">{k}.</label>
-                    <input
-                      type="text"
-                      name={k}
-                      value={s.jawaban[k]}
-                      onChange={(e) => handleJawabanChange(idx, k, e.target.value)}
-                      className="w-full border rounded px-3 py-2"
-                      required
-                    />
-                  </div>
-                ))}
+              <div>
+                <label className="block font-medium text-gray-700 mb-3">
+                  Pilihan Jawaban <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => (
+                    <div key={k} className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-8 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold">
+                        {k}
+                      </span>
+                      <input
+                        type="text"
+                        name={k}
+                        value={s.jawaban[k]}
+                        onChange={(e) => handleJawabanChange(idx, k, e.target.value)}
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder={`Jawaban ${k}`}
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Pilih Jawaban Benar */}
-              <div className="mb-2">
-                <label className="block mb-1 font-medium">Jawaban Benar:</label>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <label className="block font-medium text-gray-700 mb-2">
+                  Kunci Jawaban <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={s.jawabanBenar}
                   onChange={(e) =>
                     handleJawabanBenarChange(idx, e.target.value as keyof JawabanOptions)
                   }
-                  className="border rounded px-3 py-2"
+                  className="w-full md:w-48 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer bg-white"
                   required
                 >
                   {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map((k) => (
                     <option key={k} value={k}>
-                      {k}
+                      Opsi {k}
                     </option>
                   ))}
                 </select>
@@ -243,37 +335,61 @@ export default function SoalBulkPage() {
             </div>
           ))}
 
-          <div className="flex justify-end">
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-6 border-t">
+            <button
+              type="button"
+              onClick={() => router.push('/admin/daftarUjian')}
+              className="bg-gray-600 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+              disabled={isSubmitting}
+            >
+              Kembali
+            </button>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
+              disabled={isSubmitting}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Simpan Soal
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block animate-spin mr-2">⏳</span>
+                  Menyimpan...
+                </>
+              ) : (
+                'Simpan Soal'
+              )}
             </button>
           </div>
         </form>
       </div>
 
-      {/* ✅ Modal konfirmasi sukses */}
+      {/* Modal konfirmasi sukses */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
-            <h2 className="text-lg font-semibold mb-4">Berhasil!</h2>
-            <p className="mb-6">Soal berhasil disimpan. Ingin melihat preview soal?</p>
-            <div className="flex justify-end space-x-3">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <div className="text-center mb-4">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Berhasil!</h2>
+              <p className="text-gray-600">Soal berhasil disimpan. Ingin melihat preview soal?</p>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                onClick={() => router.push('/admin/daftarUjian')}
+                className="bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg hover:bg-gray-400 transition cursor-pointer order-2 sm:order-1"
+              >
+                Kembali ke Daftar
+              </button>
               <button
                 onClick={() =>
                   router.push(`/admin/daftarUjian/lihatSoal/?ujian_id=${ujianId}`)
                 }
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 cursor-pointer"
+                className="bg-green-600 text-white px-5 py-2.5 rounded-lg hover:bg-green-700 transition cursor-pointer order-1 sm:order-2"
               >
-                Lihat Soal
-              </button>
-              <button
-                onClick={() => router.push('/admin/daftarUjian')}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 cursor-pointer"
-              >
-                Kembali
+                👁️ Lihat Soal
               </button>
             </div>
           </div>

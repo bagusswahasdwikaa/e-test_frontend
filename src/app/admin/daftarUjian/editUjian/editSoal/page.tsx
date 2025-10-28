@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,7 +14,7 @@ type SoalData = {
   mediaType: 'none' | 'image' | 'video';
   jawaban: JawabanOptions;
   jawabanBenar: keyof JawabanOptions;
-  hasMedia: boolean; // 🆕 apakah soal punya media lama
+  hasMedia: boolean;
 };
 
 type UjianData = {
@@ -48,10 +48,24 @@ export default function EditSoalPage() {
   const [soals, setSoals] = useState<SoalData[]>([]);
   const [mediaFiles, setMediaFiles] = useState<Record<string, File | null>>({});
   const [previews, setPreviews] = useState<Record<string, string | null>>({});
-  const [removeFlags, setRemoveFlags] = useState<Record<string, boolean>>({}); // 🆕
+  const [removeFlags, setRemoveFlags] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ujian, setUjian] = useState<UjianData | null>(null);
+
+  // Auto-resize textarea
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+
+  const autoResizeTextarea = (textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    // Auto-resize semua textarea saat soals berubah
+    Object.values(textareaRefs.current).forEach(autoResizeTextarea);
+  }, [soals]);
 
   useEffect(() => {
     if (!ujianId) {
@@ -115,7 +129,6 @@ export default function EditSoalPage() {
           };
         });
 
-        // Tambah soal kosong bila perlu
         if (jumlahSoal > soalList.length) {
           const kurang = jumlahSoal - soalList.length;
           for (let i = 0; i < kurang; i++) {
@@ -131,7 +144,6 @@ export default function EditSoalPage() {
           }
         }
 
-        // ✅ Set preview media lama berdasarkan localId
         const newPreviews: Record<string, string | null> = {};
         soalList.forEach((s, i) => {
           const mediaPath = arr[i]?.media_path;
@@ -201,7 +213,6 @@ export default function EditSoalPage() {
     }
   };
 
-  // 🆕 Fungsi hapus manual media lama
   const onRemoveMedia = (localId: string) => {
     if (!confirm('Hapus media ini?')) return;
     setRemoveFlags(prev => ({ ...prev, [localId]: true }));
@@ -219,15 +230,12 @@ export default function EditSoalPage() {
         form.append('pertanyaan', s.pertanyaan);
         form.append('media_type', s.mediaType);
 
-        // Remove media flag
         if (removeFlags[s.localId]) form.append('remove_media', 'true');
 
-        // Media baru
         if (s.id && mediaFiles[s.localId]) {
           form.append('media_file', mediaFiles[s.localId]!);
         }
 
-        // Jawaban
         (['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).forEach((k, i) => {
           form.append(`jawabans[${i}][jawaban]`, s.jawaban[k]);
           form.append(`jawabans[${i}][is_correct]`, k === s.jawabanBenar ? '1' : '0');
@@ -238,7 +246,7 @@ export default function EditSoalPage() {
 
         if (s.id) {
           url = `http://127.0.0.1:8000/api/soals/${s.id}`;
-          method = 'POST'; // tetap POST + _method=PUT
+          method = 'POST';
           form.append('_method', 'PUT');
         } else {
           url = `http://127.0.0.1:8000/api/soals`;
@@ -274,94 +282,168 @@ export default function EditSoalPage() {
     }
   };
 
-  if (loading) return <p className="p-6 text-center">Memuat soal...</p>;
-  if (!soals.length) return <p className="p-6 text-center">Belum ada soal.</p>;
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90">
+          <div className="relative w-35 h-35">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/assets/logo/panasonic-logo.png"
+                alt="Logo Panasonic"
+                className="w-25 h-25 object-contain"
+              />
+            </div>
+            <div className="absolute inset-0 animate-spin rounded-full border-t-7 border-white border-solid"></div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!soals.length) {
+    return (
+      <AdminLayout>
+        <p className="p-6 text-center text-gray-600">Belum ada soal.</p>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto bg-white p-6 mt-6 space-y-6">
-        <h1 className="text-2xl font-bold mb-4">Edit Soal Ujian</h1>
+      <div className="max-w-5xl mx-auto bg-white p-6 mt-6 space-y-6">
+        <div className="border-b pb-4">
+          <h1 className="text-2xl font-bold text-gray-800">Edit Soal Ujian</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Jumlah Soal: <span className="font-semibold">{soals.length}</span>
+          </p>
+        </div>
 
         {soals.map((s, idx) => (
-          <div key={s.localId} className="border p-4 rounded bg-gray-50 space-y-4">
-            <h2 className="font-medium">Soal : {idx + 1}</h2>
-            <textarea
-              className="w-full border rounded p-2"
-              value={s.pertanyaan}
-              onChange={e => onChangeSoal(s.localId, 'pertanyaan', e.target.value)}
-              required
-            />
+          <div key={s.localId} className="border border-gray-300 rounded-lg p-5 bg-gradient-to-br from-white to-gray-50 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-lg font-semibold text-blue-900">Soal {idx + 1}</h2>
+            </div>
 
+            {/* Pertanyaan - Auto-resize Textarea */}
             <div>
-              <label className="block font-medium mb-1">Upload Media</label>
+              <label className="block font-medium text-gray-700 mb-2">
+                Pertanyaan <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                ref={(el) => {
+                  textareaRefs.current[s.localId] = el;
+                  autoResizeTextarea(el);
+                }}
+                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none overflow-hidden transition-all"
+                value={s.pertanyaan}
+                onChange={e => {
+                  onChangeSoal(s.localId, 'pertanyaan', e.target.value);
+                  autoResizeTextarea(e.target);
+                }}
+                placeholder="Masukkan pertanyaan soal di sini..."
+                rows={3}
+                style={{ minHeight: '80px' }}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {s.pertanyaan.length} karakter
+              </p>
+            </div>
+
+            {/* Upload Media */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <label className="block font-medium text-gray-700 mb-2">
+                Upload Media (Opsional)
+              </label>
               <input
                 type="file"
                 accept="image/*,video/*"
                 disabled={s.id === null}
                 onChange={(e) => onMediaChange(s.localId, s.id, e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
+              {s.id === null && (
+                <p className="text-xs text-amber-600 mt-2">
+                  ⚠️ Simpan soal terlebih dahulu untuk mengupload media
+                </p>
+              )}
 
-              {/* ✅ Tampilkan media lama atau baru */}
+              {/* Preview Media */}
               {previews[s.localId] && !removeFlags[s.localId] && (
-                <div className="mt-3">
+                <div className="mt-4 p-3 bg-white rounded-lg border border-gray-300">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Preview Media:</p>
                   {s.mediaType === 'image' ? (
                     <img
                       src={previews[s.localId]!}
-                      className="max-w-full max-h-48 rounded border"
+                      className="max-w-full max-h-64 rounded-lg border border-gray-200 shadow-sm"
                       alt="Preview media soal"
                     />
                   ) : (
                     <video
                       src={previews[s.localId]!}
                       controls
-                      className="max-w-full max-h-48 rounded border"
+                      className="max-w-full max-h-64 rounded-lg border border-gray-200 shadow-sm"
                     />
                   )}
                   <button
                     type="button"
                     onClick={() => onRemoveMedia(s.localId)}
-                    className="mt-2 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer"
+                    className="mt-3 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
                   >
-                    Hapus Media
+                    🗑️ Hapus Media
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(k => (
-                <div key={k}>
-                  <label>{k}.</label>
-                  <input
-                    type="text"
-                    className="w-full border rounded px-2 py-1"
-                    value={s.jawaban[k]}
-                    onChange={e => onChangeJawaban(s.localId, k, e.target.value)}
-                    required
-                  />
-                </div>
-              ))}
+            {/* Pilihan Jawaban */}
+            <div>
+              <label className="block font-medium text-gray-700 mb-3">
+                Pilihan Jawaban <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(k => (
+                  <div key={k} className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-8 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold">
+                      {k}
+                    </span>
+                    <input
+                      type="text"
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={s.jawaban[k]}
+                      onChange={e => onChangeJawaban(s.localId, k, e.target.value)}
+                      placeholder={`Jawaban ${k}`}
+                      required
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <label className="mr-2">Jawaban Benar:</label>
+            {/* Jawaban Benar */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <label className="block font-medium text-gray-700 mb-2">
+                Kunci Jawaban <span className="text-red-500">*</span>
+              </label>
               <select
                 value={s.jawabanBenar}
                 onChange={e => onChangeSoal(s.localId, 'jawabanBenar', e.target.value as keyof JawabanOptions)}
-                className="border rounded px-2 py-1 cursor-pointer"
+                className="w-full md:w-48 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer bg-white"
               >
                 {(['A', 'B', 'C', 'D'] as (keyof JawabanOptions)[]).map(k => (
-                  <option key={k} value={k}>{k}</option>
+                  <option key={k} value={k}>Opsi {k}</option>
                 ))}
               </select>
             </div>
           </div>
         ))}
 
-        <div className="flex justify-between mt-4">
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center pt-6 border-t">
           <button
             onClick={() => router.push(`/admin/daftarUjian/editUjian?ujian_id=${ujianId}`)}
-            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 cursor-pointer"
+            className="bg-gray-600 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
             disabled={saving}
           >
             Kembali
@@ -369,9 +451,16 @@ export default function EditSoalPage() {
           <button
             onClick={submitAll}
             disabled={saving}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Menyimpan...' : 'Simpan Semua'}
+            {saving ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⏳</span>
+                Menyimpan...
+              </>
+            ) : (
+              'Simpan Semua'
+            )}
           </button>
         </div>
       </div>
