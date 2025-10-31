@@ -513,15 +513,15 @@ export default function DaftarUjianPage() {
         <div className="flex flex-wrap gap-2 items-center">
           <button
             onClick={openCloneModal}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-xs font-semibold cursor-pointer"
           >
-            <DocumentDuplicateIcon className="w-5 h-5" />
+            <DocumentDuplicateIcon className="w-4 h-4" />
             Kloning
           </button>
 
           <button
             onClick={() => router.push('/admin/daftarUjian/buatSoal')}
-            className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition text-sm font-medium cursor-pointer"
+            className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition text-xs font-semibold cursor-pointer"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -529,7 +529,7 @@ export default function DaftarUjianPage() {
               viewBox="0 0 24 24"
               strokeWidth={3}
               stroke="currentColor"
-              className="w-5 h-5"
+              className="w-4 h-4"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
@@ -538,22 +538,22 @@ export default function DaftarUjianPage() {
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer ${
+            className={`px-3 py-2 rounded-md flex items-center gap-1.5 transition text-xs font-semibold cursor-pointer ${
               showFilters || hasActiveFilters
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-500 text-white hover:bg-gray-700'
             }`}
           >
-            <FunnelIcon className="w-5 h-5" />
+            <FunnelIcon className="w-4 h-4" />
             Filter {hasActiveFilters && `(${Object.values(columnFilters).filter(v => v !== '').length})`}
           </button>
 
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
-              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-sm font-medium cursor-pointer"
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition text-xs font-semibold cursor-pointer"
             >
-              <XMarkIcon className="w-5 h-5" />
+              <XMarkIcon className="w-4 h-4" />
               Reset Filter
             </button>
           )}
@@ -656,8 +656,8 @@ export default function DaftarUjianPage() {
           )}
 
           <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
-            <table className="min-w-full text-gray-800 text-sm border-collapse">
-              <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
+            <table className="min-w-full text-gray-800 text-xs border-collapse">
+              <thead className="bg-blue-900 text-white text-xs">
                 <tr className="border-b border-black">
                   <th className="px-4 py-3 text-center w-12">No</th>
                   <th 
@@ -862,7 +862,7 @@ export default function DaftarUjianPage() {
             <div className="mb-2 text-sm text-gray-600">Peserta Belum Dibagikan:</div>
             <div className="border border-gray-300 rounded max-h-40 overflow-y-auto p-2 mb-4">
               {pesertaBelumFiltered.length === 0 ? (
-                <p className="text-center text-gray-600">Tidak ada peserta tersedia</p>
+                <p className="text-center text-sm text-gray-600">Tidak ada peserta tersedia</p>
               ) : (
                 pesertaBelumFiltered.map((p) => (
                   <label
@@ -886,7 +886,7 @@ export default function DaftarUjianPage() {
             <div className="mb-2 text-sm text-gray-600">Peserta Sudah Dibagikan:</div>
             <div className="border border-gray-300 rounded max-h-40 overflow-y-auto p-2 mb-4 bg-gray-50">
               {pesertaSudahFiltered.length === 0 ? (
-                <p className="text-center text-gray-600">Belum ada peserta yang dibagikan</p>
+                <p className="text-center text-gray-600 text-sm">Belum ada peserta yang dibagikan</p>
               ) : (
                 pesertaSudahFiltered.map((p) => (
                   <label

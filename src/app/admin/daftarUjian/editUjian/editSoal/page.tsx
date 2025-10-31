@@ -443,7 +443,7 @@ export default function EditSoalPage() {
         <div className="flex justify-between items-center pt-6 border-t">
           <button
             onClick={() => router.push(`/admin/daftarUjian/editUjian?ujian_id=${ujianId}`)}
-            className="bg-gray-600 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+            className="bg-gray-600 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition cursor-pointer disabled:opacity-50 text-sm"
             disabled={saving}
           >
             Kembali
@@ -451,11 +451,11 @@ export default function EditSoalPage() {
           <button
             onClick={submitAll}
             disabled={saving}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             {saving ? (
               <>
-                <span className="inline-block animate-spin mr-2">⏳</span>
+                <span className="inline-block animate-spin mr-2 text-sm">⏳</span>
                 Menyimpan...
               </>
             ) : (

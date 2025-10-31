@@ -452,7 +452,7 @@ export default function DaftarPesertaPage() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => router.push('/admin/daftarPeserta/tambahPeserta')}
-            className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-sm font-medium cursor-pointer"
+            className="bg-black text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-gray-800 transition-colors duration-200 text-xs font-semibold cursor-pointer"
             type="button"
           >
             <svg
@@ -461,7 +461,7 @@ export default function DaftarPesertaPage() {
               viewBox="0 0 24 24"
               strokeWidth={3}
               stroke="currentColor"
-              className="w-5 h-5"
+              className="w-4 h-4"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
@@ -470,7 +470,7 @@ export default function DaftarPesertaPage() {
 
           <button
             onClick={handleDownloadTemplate}
-            className="bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-green-700 transition-colors duration-200 text-sm font-medium cursor-pointer"
+            className="bg-green-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-green-700 transition-colors duration-200 text-xs font-semibold cursor-pointer"
             type="button"
           >
             <svg
@@ -479,7 +479,7 @@ export default function DaftarPesertaPage() {
               viewBox="0 0 24 24"
               strokeWidth={2}
               stroke="currentColor"
-              className="w-5 h-5"
+              className="w-4 h-4"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
@@ -488,7 +488,7 @@ export default function DaftarPesertaPage() {
 
           <button
             onClick={() => setShowImportModal(true)}
-            className="bg-blue-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-blue-700 transition-colors duration-200 text-sm font-medium cursor-pointer"
+            className="bg-blue-600 text-white px-3 py-2 rounded-md flex items-center gap-1.5 hover:bg-blue-700 transition-colors duration-200 text-xs font-semibold cursor-pointer"
             type="button"
           >
             <svg
@@ -497,7 +497,7 @@ export default function DaftarPesertaPage() {
               viewBox="0 0 24 24"
               strokeWidth={2}
               stroke="currentColor"
-              className="w-5 h-5"
+              className="w-4 h-4"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
@@ -515,8 +515,8 @@ export default function DaftarPesertaPage() {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
-          <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
+        <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-xs">
+          <thead className="bg-blue-900 text-white text-xs font-semibold">
             <tr>
               <th className="px-4 py-3 text-center w-12">No</th>
               <th 
@@ -731,7 +731,7 @@ export default function DaftarPesertaPage() {
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Format: .xlsx, .xls, .csv (Maksimal 10MB)
+                Format: .xlsx, .xls, .csv
               </p>
             </div>
 

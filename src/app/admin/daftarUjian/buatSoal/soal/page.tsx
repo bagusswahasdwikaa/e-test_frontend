@@ -24,15 +24,13 @@ export default function SoalBulkPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const ujianIdParam = searchParams.get('ujian_id');
   const jumlahSoalParam = searchParams.get('jumlah_soal');
-
-  const ujianId = ujianIdParam ? parseInt(ujianIdParam, 10) : null;
   const jumlahSoal = jumlahSoalParam ? parseInt(jumlahSoalParam, 10) : 0;
 
   const [soals, setSoals] = useState<SingleSoal[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ujianData, setUjianData] = useState<any>(null);
 
   // Auto-resize textarea
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
@@ -44,28 +42,54 @@ export default function SoalBulkPage() {
   };
 
   useEffect(() => {
-    // Auto-resize semua textarea saat soals berubah
     Object.values(textareaRefs.current).forEach(autoResizeTextarea);
   }, [soals]);
 
-  // Inisialisasi daftar soal kosong
+  // Inisialisasi: ambil data ujian dari sessionStorage
   useEffect(() => {
-    if (!ujianId || jumlahSoal <= 0) {
-      alert('Parameter ujian_id atau jumlah_soal tidak valid.');
-      router.push('/admin/daftarUjian');
+    const storedData = sessionStorage.getItem('ujianData');
+    
+    if (!storedData || jumlahSoal <= 0) {
+      alert('Data ujian tidak ditemukan. Silakan isi form ujian terlebih dahulu.');
+      router.push('/admin/daftarUjian/buatSoal');
       return;
     }
 
-    const initialSoals: SingleSoal[] = Array.from({ length: jumlahSoal }, () => ({
-      pertanyaan: '',
-      mediaFile: null,
-      mediaPreviewUrl: null,
-      mediaType: 'none',
-      jawaban: { A: '', B: '', C: '', D: '' },
-      jawabanBenar: 'A',
-    }));
-    setSoals(initialSoals);
-  }, [ujianId, jumlahSoal, router]);
+    const parsedData = JSON.parse(storedData);
+    setUjianData(parsedData);
+
+    // Cek apakah ada soal yang sudah tersimpan di sessionStorage
+    const storedSoals = sessionStorage.getItem('soalsData');
+    
+    if (storedSoals) {
+      // Restore soal yang sudah diisi sebelumnya
+      const parsedSoals = JSON.parse(storedSoals);
+      setSoals(parsedSoals);
+    } else {
+      // Inisialisasi soal kosong
+      const initialSoals: SingleSoal[] = Array.from({ length: jumlahSoal }, () => ({
+        pertanyaan: '',
+        mediaFile: null,
+        mediaPreviewUrl: null,
+        mediaType: 'none',
+        jawaban: { A: '', B: '', C: '', D: '' },
+        jawabanBenar: 'A',
+      }));
+      setSoals(initialSoals);
+    }
+  }, [jumlahSoal, router]);
+
+  // Simpan soal ke sessionStorage setiap kali ada perubahan
+  useEffect(() => {
+    if (soals.length > 0) {
+      // Simpan soals tanpa file (karena File object tidak bisa di-stringify)
+      const soalsToStore = soals.map(s => ({
+        ...s,
+        mediaFile: null, // File akan hilang, tapi preview URL tetap ada
+      }));
+      sessionStorage.setItem('soalsData', JSON.stringify(soalsToStore));
+    }
+  }, [soals]);
 
   const handlePertanyaanChange = (index: number, value: string) => {
     const updated = [...soals];
@@ -122,11 +146,15 @@ export default function SoalBulkPage() {
     setSoals(updated);
   };
 
+  const formatDateTime = (value: string) => {
+    return value ? value.replace('T', ' ') + ':00' : '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ujianId) {
-      alert('ID ujian tidak ditemukan.');
+    if (!ujianData) {
+      alert('Data ujian tidak ditemukan.');
       return;
     }
 
@@ -147,45 +175,87 @@ export default function SoalBulkPage() {
 
     setIsSubmitting(true);
 
-    // Siapkan FormData untuk multipart upload
-    const formData = new FormData();
-    formData.append('ujian_id', ujianId.toString());
-
-    soals.forEach((s, idx) => {
-      formData.append(`soals[${idx}][pertanyaan]`, s.pertanyaan);
-      formData.append(`soals[${idx}][media_type]`, s.mediaType);
-      if (s.mediaFile) {
-        formData.append(`soals[${idx}][media_file]`, s.mediaFile);
-      }
-      ['A', 'B', 'C', 'D'].forEach((key) => {
-        formData.append(`soals[${idx}][jawabans][${key}][jawaban]`, s.jawaban[key as keyof JawabanOptions]);
-        formData.append(
-          `soals[${idx}][jawabans][${key}][is_correct]`,
-          (key === s.jawabanBenar ? '1' : '0')
-        );
-      });
-    });
-
     try {
-      const response = await fetch('http://localhost:8000/api/soals/bulk', {
+      // Step 1: Buat ujian terlebih dahulu
+      const ujianPayload = {
+        nama_ujian: ujianData.nama_ujian,
+        kode_soal: ujianData.kode_soal,
+        jumlah_soal: ujianData.jumlah_soal,
+        durasi: ujianData.durasi,
+        tanggal_mulai: formatDateTime(ujianData.tanggal_mulai),
+        tanggal_akhir: formatDateTime(ujianData.tanggal_akhir),
+        jenis_ujian: ujianData.jenis_ujian,
+        ...(ujianData.standar_minimal_nilai && {
+          standar_minimal_nilai: ujianData.standar_minimal_nilai
+        })
+      };
+
+      const ujianResponse = await fetch('http://localhost:8000/api/ujians', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(ujianPayload),
+      });
+
+      if (!ujianResponse.ok) {
+        const error = await ujianResponse.json();
+        console.error('Gagal menyimpan ujian:', error);
+        alert('Gagal menyimpan ujian: ' + (error.message || 'Terjadi kesalahan.'));
+        return;
+      }
+
+      const ujianResult = await ujianResponse.json();
+      const ujianId = ujianResult.data.id_ujian;
+
+      // Step 2: Simpan semua soal dengan FormData
+      const formData = new FormData();
+      formData.append('ujian_id', ujianId.toString());
+
+      soals.forEach((s, idx) => {
+        formData.append(`soals[${idx}][pertanyaan]`, s.pertanyaan);
+        formData.append(`soals[${idx}][media_type]`, s.mediaType);
+        if (s.mediaFile) {
+          formData.append(`soals[${idx}][media_file]`, s.mediaFile);
+        }
+        ['A', 'B', 'C', 'D'].forEach((key) => {
+          formData.append(`soals[${idx}][jawabans][${key}][jawaban]`, s.jawaban[key as keyof JawabanOptions]);
+          formData.append(
+            `soals[${idx}][jawabans][${key}][is_correct]`,
+            (key === s.jawabanBenar ? '1' : '0')
+          );
+        });
+      });
+
+      const soalResponse = await fetch('http://localhost:8000/api/soals/bulk', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        const err = await response.json();
+      if (!soalResponse.ok) {
+        const err = await soalResponse.json();
         console.error('Gagal menyimpan soal:', err);
         alert('Gagal menyimpan soal. Periksa console.');
         return;
       }
 
+      // Hapus data dari sessionStorage setelah berhasil
+      sessionStorage.removeItem('ujianData');
+      sessionStorage.removeItem('soalsData');
+
       setShowModal(true);
     } catch (error) {
       console.error('Error saat fetch:', error);
-      alert('Terjadi kesalahan saat menyimpan soal.');
+      alert('Terjadi kesalahan saat menyimpan data.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleBack = () => {
+    // Kembali ke form sebelumnya tanpa menghapus data
+    router.push('/admin/daftarUjian/buatSoal');
   };
 
   if (soals.length === 0) {
@@ -339,8 +409,8 @@ export default function SoalBulkPage() {
           <div className="flex justify-between items-center pt-6 border-t">
             <button
               type="button"
-              onClick={() => router.push('/admin/daftarUjian')}
-              className="bg-gray-600 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+              onClick={handleBack}
+              className="bg-gray-600 text-white text-sm px-6 py-2.5 rounded-lg hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
               disabled={isSubmitting}
             >
               Kembali
@@ -348,7 +418,7 @@ export default function SoalBulkPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-600 text-white text-sm px-6 py-2.5 rounded-lg hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>
@@ -356,7 +426,7 @@ export default function SoalBulkPage() {
                   Menyimpan...
                 </>
               ) : (
-                'Simpan Soal'
+                'Simpan Semua Data'
               )}
             </button>
           </div>
@@ -374,22 +444,14 @@ export default function SoalBulkPage() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-gray-800 mb-2">Berhasil!</h2>
-              <p className="text-gray-600">Soal berhasil disimpan. Ingin melihat preview soal?</p>
+              <p className="text-gray-600">Ujian dan soal berhasil disimpan.</p>
             </div>
             <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 onClick={() => router.push('/admin/daftarUjian')}
                 className="bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg hover:bg-gray-400 transition cursor-pointer order-2 sm:order-1"
               >
-                Kembali ke Daftar
-              </button>
-              <button
-                onClick={() =>
-                  router.push(`/admin/daftarUjian/lihatSoal/?ujian_id=${ujianId}`)
-                }
-                className="bg-green-600 text-white px-5 py-2.5 rounded-lg hover:bg-green-700 transition cursor-pointer order-1 sm:order-2"
-              >
-                👁️ Lihat Soal
+                Kembali ke Daftar Ujian
               </button>
             </div>
           </div>

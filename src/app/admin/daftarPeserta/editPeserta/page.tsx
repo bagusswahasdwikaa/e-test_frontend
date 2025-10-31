@@ -245,7 +245,7 @@ export default function EditPesertaPage() {
             <button
               type="button"
               onClick={() => router.push('/admin/daftarPeserta')}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer text-sm"
               disabled={loading}
             >
               Batal
@@ -253,7 +253,7 @@ export default function EditPesertaPage() {
 
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer text-sm"
               disabled={loading}
             >
               {loading ? 'Menyimpan...' : 'Simpan Perubahan'}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useRouter } from 'next/navigation';
 
@@ -18,16 +18,30 @@ export default function BuatSoalPage() {
     standarMinimalNilai: '',
   });
 
+  // Restore data dari sessionStorage saat komponen mount
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('ujianData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setFormData({
+        nama: parsedData.nama_ujian || '',
+        kode: parsedData.kode_soal || '',
+        jumlahSoal: parsedData.jumlah_soal?.toString() || '',
+        tanggalMulai: parsedData.tanggal_mulai || '',
+        tanggalAkhir: parsedData.tanggal_akhir || '',
+        durasi: parsedData.durasi?.toString() || '',
+        jenisUjian: parsedData.jenis_ujian || '',
+        standarMinimalNilai: parsedData.standar_minimal_nilai?.toString() || '',
+      });
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-  };
-
-  const formatDateTime = (value: string) => {
-    return value ? value.replace('T', ' ') + ':00' : '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,63 +74,47 @@ export default function BuatSoalPage() {
       return;
     }
 
-    try {
-      const payload: Record<string, any> = {
-        nama_ujian: nama,
-        kode_soal: kode,
-        jumlah_soal: parseInt(jumlahSoal),
-        durasi: parseInt(durasi),
-        tanggal_mulai: formatDateTime(tanggalMulai),
-        tanggal_akhir: formatDateTime(tanggalAkhir),
-        jenis_ujian: jenisUjian,
-      };
+    // Simpan data ke sessionStorage untuk diambil di halaman selanjutnya
+    const ujianData = {
+      nama_ujian: nama,
+      kode_soal: kode,
+      jumlah_soal: parseInt(jumlahSoal),
+      durasi: parseInt(durasi),
+      tanggal_mulai: tanggalMulai,
+      tanggal_akhir: tanggalAkhir,
+      jenis_ujian: jenisUjian,
+      ...(jenisUjian === 'POSTEST' && { standar_minimal_nilai: parseInt(standarMinimalNilai) })
+    };
 
-      if (jenisUjian === 'POSTEST') {
-        payload.standar_minimal_nilai = parseInt(standarMinimalNilai);
-      }
+    sessionStorage.setItem('ujianData', JSON.stringify(ujianData));
 
-      const response = await fetch('http://localhost:8000/api/ujians', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+    // Navigasi ke halaman soal tanpa menyimpan ke database
+    router.push(
+      `/admin/daftarUjian/buatSoal/soal/?jumlah_soal=${jumlahSoal}`
+    );
+  };
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Gagal menyimpan:', error);
-        alert('Gagal menyimpan ujian: ' + (error.message || 'Terjadi kesalahan.'));
-        return;
-      }
-
-      const result = await response.json();
-      alert('Ujian berhasil dibuat!');
-
-      router.push(
-        `/admin/daftarUjian/buatSoal/soal/?ujian_id=${result.data.id_ujian}&jumlah_soal=${jumlahSoal}`
-      );
-    } catch (err) {
-      console.error('Error:', err);
-      alert('Terjadi kesalahan saat menyimpan ujian.');
-    }
+  const handleCancel = () => {
+    // Hapus data dari sessionStorage saat batal
+    sessionStorage.removeItem('ujianData');
+    sessionStorage.removeItem('soalsData');
+    router.push('/admin/daftarUjian');
   };
 
   return (
     <AdminLayout>
       <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow mt-6">
-        <h1 className="text-2xl font-semibold mb-4">Form Buat Ujian</h1>
+        <h1 className="text-2xl font-semibold mb-4 underline">Form Buat Ujian</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nama Ujian */}
           <div>
-            <label className="block font-medium mb-1">Nama Ujian</label>
+            <label className="block font-semibold mb-1 text-sm">Nama Ujian</label>
             <input
               type="text"
               name="nama"
               value={formData.nama}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               placeholder="Contoh: Ujian Akhir Semester"
               required
             />
@@ -124,13 +122,13 @@ export default function BuatSoalPage() {
 
           {/* Kode Soal */}
           <div>
-            <label className="block font-medium mb-1">Kode Soal</label>
+            <label className="block font-semibold mb-1 text-sm">Kode Soal</label>
             <input
               type="text"
               name="kode"
               value={formData.kode}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               placeholder="Contoh: UJ001"
               maxLength={12}
               required
@@ -139,13 +137,13 @@ export default function BuatSoalPage() {
 
           {/* Jumlah Soal */}
           <div>
-            <label className="block font-medium mb-1">Jumlah Soal</label>
+            <label className="block font-semibold mb-1 text-sm">Jumlah Soal</label>
             <input
               type="number"
               name="jumlahSoal"
               value={formData.jumlahSoal}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               min={1}
               max={100}
               required
@@ -154,39 +152,39 @@ export default function BuatSoalPage() {
 
           {/* Tanggal Mulai */}
           <div>
-            <label className="block font-medium mb-1">Tanggal Mulai</label>
+            <label className="block font-semibold mb-1 text-sm">Tanggal Mulai</label>
             <input
               type="datetime-local"
               name="tanggalMulai"
               value={formData.tanggalMulai}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               required
             />
           </div>
 
           {/* Tanggal Akhir */}
           <div>
-            <label className="block font-medium mb-1">Tanggal Akhir</label>
+            <label className="block font-semibold mb-1 text-sm">Tanggal Akhir</label>
             <input
               type="datetime-local"
               name="tanggalAkhir"
               value={formData.tanggalAkhir}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               required
             />
           </div>
 
           {/* Durasi */}
           <div>
-            <label className="block font-medium mb-1">Durasi (menit)</label>
+            <label className="block font-semibold mb-1 text-sm">Durasi (menit)</label>
             <input
               type="number"
               name="durasi"
               value={formData.durasi}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               placeholder="Contoh: 90"
               required
             />
@@ -194,12 +192,12 @@ export default function BuatSoalPage() {
 
           {/* Jenis Ujian */}
           <div>
-            <label className="block font-medium mb-1">Jenis Ujian</label>
+            <label className="block font-semibold mb-1 text-sm">Jenis Ujian</label>
             <select
               name="jenisUjian"
               value={formData.jenisUjian}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 text-sm"
               required
             >
               <option value="">-- Pilih Jenis Ujian --</option>
@@ -211,13 +209,13 @@ export default function BuatSoalPage() {
           {/* Standar Minimal Nilai (hanya untuk POSTEST) */}
           {formData.jenisUjian === 'POSTEST' && (
             <div>
-              <label className="block font-medium mb-1">Standar Minimal Nilai</label>
+              <label className="block font-semibold mb-1 text-sm">Standar Minimal Nilai</label>
               <input
                 type="number"
                 name="standarMinimalNilai"
                 value={formData.standarMinimalNilai}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-2 text-sm"
                 placeholder="Contoh: 70"
                 min={0}
                 max={100}
@@ -230,16 +228,16 @@ export default function BuatSoalPage() {
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => router.back()}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer"
+              onClick={handleCancel}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded cursor-pointer text-sm"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded cursor-pointer"
+              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded cursor-pointer text-sm"
             >
-              Simpan
+              Selanjutnya
             </button>
           </div>
         </form>

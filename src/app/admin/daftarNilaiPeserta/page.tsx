@@ -231,13 +231,13 @@ export default function AdminDashboard() {
           type="button"
         >
           <ArrowDownTrayIcon className="h-4 w-4 text-white stroke-2" />
-          <span className="text-sm font-medium">Unduh Excel</span>
+          <span className="text-xs font-semibold">Unduh Excel</span>
         </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-6 mb-6">
         <div className="flex items-center gap-2">
-          <label className="font-medium text-gray-700 whitespace-nowrap">
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
             Rentang Bulan:
           </label>
           <DatePicker
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
             dateFormat="MM/yyyy"
             showMonthYearPicker
             placeholderText="Pilih rentang bulan"
-            className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44 cursor-pointer"
+            className="rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-xs text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44 cursor-pointer"
             onChangeRaw={(event) => event?.preventDefault?.()}
             filterDate={isSelectableDate}
           />
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-2 whitespace-nowrap">
           <label
             htmlFor="filterStatus"
-            className="font-medium text-gray-700 select-none"
+            className="text-sm font-medium text-gray-700 select-none"
           >
             Filter Status:
           </label>
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
             id="filterStatus"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-36 rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-sm text-gray-700 shadow-sm
+            className="w-36 rounded-md border border-gray-300 bg-gray-100 py-1.5 px-2 text-xs text-gray-700 shadow-sm
               focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-150 ease-in-out cursor-pointer"
           >
             <option value="">Semua Status</option>
@@ -296,8 +296,8 @@ export default function AdminDashboard() {
       ) : (
         <>
           <div className="overflow-x-auto bg-white shadow rounded-lg mb-4 border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-sm">
-              <thead className="bg-blue-900 text-white uppercase text-xs font-semibold">
+            <table className="min-w-full divide-y divide-gray-200 text-gray-800 text-xs">
+              <thead className="bg-blue-900 text-white text-xs font-semibold">
                 <tr>
                   <th className="px-4 py-3 text-center w-12">No</th>
                   <th 

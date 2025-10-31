@@ -213,28 +213,28 @@ export default function EditUjianPage() {
   return (
     <AdminLayout>
       <div className="max-w-3xl mx-auto bg-white p-6 mt-6 rounded shadow space-y-4">
-        <h1 className="text-2xl font-bold text-gray-800">Edit Ujian</h1>
+        <h1 className="text-2xl font-semibold underline text-gray-800 mb-4">Edit Ujian</h1>
 
         {/* Nama Ujian */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Nama Ujian</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Nama Ujian</label>
           <input
             type="text"
             value={ujian.nama_ujian}
             onChange={e => handleChange('nama_ujian', e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             placeholder="Masukkan nama ujian"
           />
         </div>
 
         {/* Kode Soal */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Kode Soal</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Kode Soal</label>
           <input
             type="text"
             value={ujian.kode_soal}
             onChange={e => handleChange('kode_soal', e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             placeholder="Masukkan kode soal"
             maxLength={12}
           />
@@ -242,59 +242,59 @@ export default function EditUjianPage() {
 
         {/* Jumlah Soal */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Jumlah Soal</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Jumlah Soal</label>
           <input
             type="number"
             min={1}
             value={ujian.jumlah_soal}
             onChange={e => handleChange('jumlah_soal', Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             placeholder="Masukkan jumlah soal"
           />
         </div>
 
         {/* Tanggal Mulai */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Tanggal Mulai</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Tanggal Mulai</label>
           <input
             type="datetime-local"
             value={ujian.tanggal_mulai}
             onChange={e => handleChange('tanggal_mulai', e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
 
         {/* Tanggal Akhir */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Tanggal Akhir</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Tanggal Akhir</label>
           <input
             type="datetime-local"
             value={ujian.tanggal_akhir}
             onChange={e => handleChange('tanggal_akhir', e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
 
         {/* Durasi */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Durasi (menit)</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Durasi (menit)</label>
           <input
             type="number"
             min={1}
             value={ujian.durasi}
             onChange={e => handleChange('durasi', Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             placeholder="Masukkan durasi dalam menit"
           />
         </div>
 
         {/* Jenis Ujian */}
         <div>
-          <label className="block mb-1 font-semibold text-gray-700">Jenis Ujian</label>
+          <label className="block mb-1 font-semibold text-gray-700 text-sm">Jenis Ujian</label>
           <select
             value={ujian.jenis_ujian}
             onChange={e => handleChange('jenis_ujian', e.target.value as 'PRETEST' | 'POSTEST')}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="PRETEST">Pre Test</option>
             <option value="POSTEST">Post Test</option>
@@ -304,7 +304,7 @@ export default function EditUjianPage() {
         {/* Standar Minimal Nilai (hanya jika POSTEST) */}
         {ujian.jenis_ujian === 'POSTEST' && (
           <div>
-            <label className="block mb-1 font-semibold text-gray-700">
+            <label className="block mb-1 font-semibold text-sm text-gray-700">
               Standar Minimal Nilai <span className="text-red-500">*</span>
             </label>
             <input
@@ -329,7 +329,7 @@ export default function EditUjianPage() {
         <div className="flex justify-between mt-6 pt-4 border-t">
           <button
             onClick={() => router.push('/admin/daftarUjian')}
-            className="bg-gray-600 text-white px-5 py-2 rounded hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+            className="bg-gray-600 text-white px-5 py-2 rounded hover:bg-gray-700 transition cursor-pointer disabled:opacity-50 text-sm"
             disabled={saving}
           >
             Kembali
@@ -337,7 +337,7 @@ export default function EditUjianPage() {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+            className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer text-sm"
           >
             {saving ? 'Menyimpan...' : 'Selanjutnya'}
           </button>
