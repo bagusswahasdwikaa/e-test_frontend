@@ -29,7 +29,7 @@ export default function EditPesertaPage() {
 
     const fetchPeserta = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/peserta/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta/${id}`);
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.message || 'Gagal memuat data peserta');
@@ -103,7 +103,7 @@ export default function EditPesertaPage() {
     try {
       setLoading(true);
 
-      const response = await fetch(`http://localhost:8000/api/peserta/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

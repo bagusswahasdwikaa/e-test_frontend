@@ -77,7 +77,7 @@ export default function EditSoalPage() {
 
     const fetchUjian = async () => {
       try {
-        const resUjian = await fetch(`http://127.0.0.1:8000/api/ujians/${ujianId}`);
+        const resUjian = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${ujianId}`);
         if (!resUjian.ok) throw new Error('Gagal fetch ujian');
         const ujianData: UjianData = await resUjian.json();
 
@@ -97,7 +97,7 @@ export default function EditSoalPage() {
 
     const fetchSoal = async (jumlahSoal: number) => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/api/ujians/${ujianId}/soals`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${ujianId}/soals`);
         if (!res.ok) throw new Error('Gagal fetch soal');
         const json = await res.json();
         const arr: SoalApiItem[] = Array.isArray(json.data) ? json.data : [];
@@ -245,11 +245,11 @@ export default function EditSoalPage() {
         let method: 'POST' | 'PUT' = 'POST';
 
         if (s.id) {
-          url = `http://127.0.0.1:8000/api/soals/${s.id}`;
+          url = `${process.env.NEXT_PUBLIC_API_URL}/soals/${s.id}`;
           method = 'POST';
           form.append('_method', 'PUT');
         } else {
-          url = `http://127.0.0.1:8000/api/soals`;
+          url = `${process.env.NEXT_PUBLIC_API_URL}/soals`;
           form.append('ujian_id', ujianId ?? '');
           method = 'POST';
         }

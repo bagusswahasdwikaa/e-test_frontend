@@ -61,7 +61,7 @@ export default function DaftarPesertaPage() {
       }
 
       try {
-        const res = await fetch('http://localhost:8000/api/peserta', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta`, {
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
@@ -221,7 +221,7 @@ export default function DaftarPesertaPage() {
     if (!selectedPeserta) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/peserta/${selectedPeserta.ID_Peserta}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta/${selectedPeserta.ID_Peserta}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
@@ -353,7 +353,7 @@ export default function DaftarPesertaPage() {
       formData.append('file', selectedFile);
 
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:8000/api/peserta/import', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta/import`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -368,7 +368,7 @@ export default function DaftarPesertaPage() {
       }
 
       // Refresh data setelah import berhasil
-      const refreshRes = await fetch('http://localhost:8000/api/peserta', {
+      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta`, {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',

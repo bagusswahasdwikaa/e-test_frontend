@@ -51,7 +51,7 @@ export default function LihatPesertaPage() {
 
       try {
         // === Ambil detail peserta ===
-        const pesertaRes = await fetch(`http://localhost:8000/api/peserta/${id}`, {
+        const pesertaRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta/${id}`, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -88,7 +88,7 @@ export default function LihatPesertaPage() {
 
         // === Ambil riwayat ujian peserta berdasarkan id user ===
         // Pastikan URL ini sesuai dengan route Anda di backend
-        const riwayatUrl = `http://localhost:8000/api/nilai-peserta/peserta/${id}`;
+        const riwayatUrl = `${process.env.NEXT_PUBLIC_API_URL}/nilai-peserta/peserta/${id}`;
         console.log('Mengambil riwayat dari URL:', riwayatUrl);
 
         const nilaiRes = await fetch(riwayatUrl, {

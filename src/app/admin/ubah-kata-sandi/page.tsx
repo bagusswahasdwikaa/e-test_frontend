@@ -89,7 +89,7 @@ export default function ChangePasswordPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/change-password`,
+        `${process.env.NEXT_PUBLIC_API_URL}/change-password`,
         {
           method: 'POST',
           headers: {

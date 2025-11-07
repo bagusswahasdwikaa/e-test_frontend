@@ -17,7 +17,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!token) {
-      setError('Token tidak ditemukan. Silakan periksa kembali tautan reset password Anda.');
+      setError('Token tidak ditemukan. Silakan periksa kembali tautan reset password Anda./n pastikan Email sesuai dengan yang didaftarkan.');
     }
   }, [token]);
 
@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:8000/api/reset-password', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

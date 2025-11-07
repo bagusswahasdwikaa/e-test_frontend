@@ -190,7 +190,7 @@ export default function SoalBulkPage() {
         })
       };
 
-      const ujianResponse = await fetch('http://localhost:8000/api/ujians', {
+      const ujianResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -228,7 +228,7 @@ export default function SoalBulkPage() {
         });
       });
 
-      const soalResponse = await fetch('http://localhost:8000/api/soals/bulk', {
+      const soalResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/soals/bulk`, {
         method: 'POST',
         body: formData,
       });

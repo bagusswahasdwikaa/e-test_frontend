@@ -51,7 +51,7 @@ export default function TambahPesertaPage() {
     try {
       setLoading(true);
 
-      const response = await fetch('http://localhost:8000/api/peserta', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/peserta`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

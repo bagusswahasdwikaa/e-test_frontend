@@ -401,7 +401,7 @@ export default function SoalPage() {
                 <p className="text-red-600 mb-4">{errorMsg}</p>
                 <button
                   onClick={() => router.push('/user/dashboard')}
-                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors cursor-pointer"
                 >
                   Kembali ke Dashboard
                 </button>

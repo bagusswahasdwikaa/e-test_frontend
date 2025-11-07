@@ -287,13 +287,13 @@ export default function UserDashboardPage() {
               )}
               <div className="flex justify-end gap-2 mt-4">
                 <button
-                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-sm"
+                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-sm cursor-pointer"
                   onClick={() => setShowModal(false)}
                 >
                   Batal
                 </button>
                 <button
-                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm cursor-pointer"
                   onClick={handleVerifikasiKode}
                 >
                   Verifikasi

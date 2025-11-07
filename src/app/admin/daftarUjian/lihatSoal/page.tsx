@@ -41,7 +41,7 @@ export default function LihatSoalPage() {
   useEffect(() => {
     if (!ujianId) return;
 
-    fetch(`http://localhost:8000/api/soals/by-ujian/${ujianId}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/soals/by-ujian/${ujianId}`)
       .then((res) => res.json())
       .then(({ data }: { data: RawSoal[] }) => {
         const normalizedData: Soal[] = data.map((soal) => {

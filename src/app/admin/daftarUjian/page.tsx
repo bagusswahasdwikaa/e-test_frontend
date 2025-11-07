@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { ShareIcon, PencilSquareIcon, TrashIcon, DocumentDuplicateIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { EyeIcon as EyeIconSolid } from '@heroicons/react/24/solid';
@@ -82,6 +83,14 @@ export default function DaftarUjianPage() {
     jumlahSoal: '',
   });
 
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const formatTanggal = (tanggal: string) => {
     if (!tanggal) return '-';
     const d = new Date(tanggal);
@@ -105,7 +114,7 @@ export default function DaftarUjianPage() {
   const fetchUjians = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/ujians');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians`);
       const contentType = res.headers.get('Content-Type');
       if (!res.ok || !contentType?.includes('application/json')) {
         throw new Error('API response is not JSON or not OK.');
@@ -327,7 +336,7 @@ export default function DaftarUjianPage() {
     if (!selectedUjian) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/ujians/${selectedUjian.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${selectedUjian.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
@@ -368,7 +377,7 @@ export default function DaftarUjianPage() {
     setLoadingClone(true);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/ujians/${selectedCloneId}/clone`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${selectedCloneId}/clone`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -413,7 +422,7 @@ export default function DaftarUjianPage() {
 
   const openBagikanModal = async (ujian: Ujian) => {
     try {
-      const res = await fetch('http://localhost:8000/api/list-peserta');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list-peserta`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
@@ -427,7 +436,7 @@ export default function DaftarUjianPage() {
 
       const pesertaAktif = semuaPeserta.filter(p => p.Status === 'aktif');
 
-      const res2 = await fetch(`http://localhost:8000/api/ujians/${ujian.id}/users`);
+      const res2 = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${ujian.id}/users`);
       if (!res2.ok) throw new Error(`HTTP ${res2.status} (assignedUsers)`);
       const json2 = await res2.json();
 
@@ -472,7 +481,7 @@ export default function DaftarUjianPage() {
       .map((p) => p.ID_Peserta);
 
     try {
-      const res = await fetch(`http://localhost:8000/api/ujians/${selectedUjian.id}/assign`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${selectedUjian.id}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_ids: ids }),
@@ -484,6 +493,28 @@ export default function DaftarUjianPage() {
       console.error(err);
       alert('Gagal kirim notifikasi.');
     }
+  };
+
+  const toggleDropdown = (ujianId: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    if (openDropdownId === ujianId) {
+      setOpenDropdownId(null);
+      setDropdownPosition(null);
+    } else {
+      const button = event.currentTarget;
+      const rect = button.getBoundingClientRect();
+      const dropdownWidth = 256; // w-64 = 16rem = 256px
+      
+      setDropdownPosition({
+        top: rect.top + window.scrollY,
+        left: rect.left + window.scrollX - dropdownWidth - 10 // 10px jarak dari tombol
+      });
+      setOpenDropdownId(ujianId);
+    }
+  };
+
+  const closeDropdown = () => {
+    setOpenDropdownId(null);
+    setDropdownPosition(null);
   };
 
   const uniqueStatuses = Array.from(new Set(dataUjian.map(u => u.status)));
@@ -771,13 +802,15 @@ export default function DaftarUjianPage() {
                       </td>
                       <td className="text-center py-2">
                         <div className="flex flex-wrap justify-center gap-2">
-                          <button
-                            onClick={() => router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${u.id}`)}
-                            className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition cursor-pointer"
-                            title="Lihat Soal"
-                          >
-                            <EyeIconSolid className="w-4 h-4" />
-                          </button>
+                          <div className="relative">
+                            <button
+                              onClick={(e) => toggleDropdown(u.id, e)}
+                              className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition cursor-pointer"
+                              title="Lihat Menu"
+                            >
+                              <EyeIconSolid className="w-4 h-4" />
+                            </button>
+                          </div>
 
                           <button
                             onClick={() => router.push(`/admin/daftarUjian/editUjian?ujian_id=${u.id}`)}
@@ -841,6 +874,62 @@ export default function DaftarUjianPage() {
             </button>
           </div>
         </>
+      )}
+
+      {/* Dropdown Menu Portal - Muncul di luar tabel menggunakan Portal */}
+      {mounted && openDropdownId !== null && dropdownPosition && createPortal(
+        <>
+          {/* Backdrop untuk menutup dropdown saat klik di luar */}
+          <div
+            onClick={closeDropdown}
+            className="fixed inset-0 z-[9998]"
+            style={{ background: 'transparent' }}
+          />
+          
+          {/* Dropdown Menu */}
+          <div
+            style={{
+              position: 'fixed',
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`,
+              zIndex: 9999
+            }}
+            className="w-64 bg-white border-2 border-blue-500 rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-3">
+              <button
+                onClick={() => {
+                  router.push(`/admin/daftarUjian/lihatSoal?ujian_id=${openDropdownId}`);
+                  closeDropdown();
+                }}
+                className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-100 rounded-lg transition flex items-center gap-3 mb-2 cursor-pointer"
+              >
+                <EyeIconSolid className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                <span>Lihat Soal</span>
+              </button>
+              <button
+                onClick={() => {
+                  router.push(`/admin/daftarUjian/peringkatPeserta?ujian_id=${openDropdownId}`);
+                  closeDropdown();
+                }}
+                className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-blue-100 rounded-lg transition flex items-center gap-3 mb-2 cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-yellow-500 flex-shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+                </svg>
+                <span>Lihat Peringkat Peserta</span>
+              </button>
+              <button
+                onClick={closeDropdown}
+                className="w-full px-4 py-2.5 text-xs text-center text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition font-medium cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
 
      {/* Modal Bagikan */}

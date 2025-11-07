@@ -64,7 +64,7 @@ export default function EditUjianPage() {
 
     const fetchUjian = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/ujians/${ujianId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${ujianId}`, {
           headers: { Accept: 'application/json' },
         });
 
@@ -155,7 +155,7 @@ export default function EditUjianPage() {
         standar_minimal_nilai: ujian.jenis_ujian === 'POSTEST' ? ujian.standar_minimal_nilai : null,
       };
 
-      const res = await fetch(`http://localhost:8000/api/ujians/${ujian.id_ujian}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ujians/${ujian.id_ujian}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

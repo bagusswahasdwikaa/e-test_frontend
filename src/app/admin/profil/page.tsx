@@ -58,7 +58,7 @@ export default function AdminProfilPage() {
       }
 
       try {
-        const res = await fetch('http://localhost:8000/api/profile', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
@@ -264,7 +264,7 @@ export default function AdminProfilPage() {
     if (!token) return;
 
     try {
-      const res = await fetch('http://localhost:8000/api/profile/photo', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/photo`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -313,7 +313,7 @@ export default function AdminProfilPage() {
 
       console.log('Sending payload:', { ...payload, photo_url: payload.photo_url ? '[BASE64_DATA]' : 'null' });
 
-      const res = await fetch('http://localhost:8000/api/profile/update', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
